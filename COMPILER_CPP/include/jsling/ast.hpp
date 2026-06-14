@@ -11,7 +11,7 @@ enum class NodeKind {
     Switch, Break, Continue, ExprStmt,
     Binary, Unary, Update, Assign, Logical, Call, Member, New,
     Array, Object, Conditional, Template, Spread,
-    Identifier, Literal
+    Identifier, Literal, StmtList
 };
 
 struct ASTNode {
@@ -204,6 +204,12 @@ struct Literal : ASTNode {
     std::string stringValue;
     bool boolValue = false;
     Literal() : ASTNode(NodeKind::Literal) {}
+};
+
+// Statement list (no scope) - used for comma-separated var decls
+struct StmtList : ASTNode {
+    std::vector<std::unique_ptr<ASTNode>> stmts;
+    StmtList() : ASTNode(NodeKind::StmtList) {}
 };
 
 } // namespace jsling

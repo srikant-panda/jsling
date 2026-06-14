@@ -104,7 +104,7 @@ Token Lexer::readTemplateLiteral() {
     std::string value;
     while (!isAtEnd() && current() != '`') {
         if (current() == '\\') {
-            advance();
+            advance(); // skip backslash
             if (isAtEnd()) break;
             char esc = current();
             switch (esc) {
@@ -115,10 +115,43 @@ Token Lexer::readTemplateLiteral() {
                 case '$': value += '$'; break;
                 default: value += esc; break;
             }
+            advance(); // skip escaped char
+        } else if (current() == '$' && peek() == '{') {
+            // Copy ${ into value, then read expression tracking brace depth
+            value += advance(); // $
+            value += advance(); // {
+            int depth = 1;
+            while (!isAtEnd() && depth > 0) {
+                if (current() == '{') {
+                    depth++;
+                    value += advance();
+                } else if (current() == '}') {
+                    depth--;
+                    value += advance();
+                } else if (current() == '`') {
+                    // Nested template literal - recursively read it
+                    Token nested = readTemplateLiteral();
+                    value += '`' + nested.lexeme + '`';
+                } else if (current() == '\'' || current() == '"') {
+                    // String literal inside expression - read it whole
+                    char q = current();
+                    value += advance(); // opening quote
+                    while (!isAtEnd() && current() != q) {
+                        if (current() == '\\') { value += advance(); }
+                        if (!isAtEnd()) value += advance();
+                    }
+                    if (!isAtEnd()) value += advance(); // closing quote
+                } else if (current() == '/' && peek() == '/') {
+                    // Line comment inside expression
+                    while (!isAtEnd() && current() != '\n') advance();
+                } else {
+                    value += advance();
+                }
+            }
         } else {
             value += current();
+            advance();
         }
-        advance();
     }
     if (isAtEnd()) throw SyntaxError("Unterminated template literal at line " + std::to_string(line_));
     advance(); // skip closing backtick

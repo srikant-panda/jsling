@@ -45,6 +45,7 @@ private:
     JSValue evalTemplate(const TemplateLiteral& node, std::shared_ptr<Environment> env);
     JSValue evalIdentifier(const Identifier& node, std::shared_ptr<Environment> env);
     JSValue evalLiteral(const Literal& node, std::shared_ptr<Environment> env);
+    JSValue evalStmtList(const StmtList& node, std::shared_ptr<Environment> env);
 
     // Type coercion helpers
     double toNumber(const JSValue& v);

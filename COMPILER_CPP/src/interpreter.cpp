@@ -97,6 +97,7 @@ JSValue Interpreter::eval(const ASTNode& node, std::shared_ptr<Environment> env)
         case NodeKind::Template: return evalTemplate(dynamic_cast<const TemplateLiteral&>(node), env);
         case NodeKind::Identifier: return evalIdentifier(dynamic_cast<const Identifier&>(node), env);
         case NodeKind::Literal: return evalLiteral(dynamic_cast<const Literal&>(node), env);
+        case NodeKind::StmtList: return evalStmtList(dynamic_cast<const StmtList&>(node), env);
         default: return JSValue::makeUndefined();
     }
 }
@@ -309,6 +310,40 @@ JSValue Interpreter::evalBinary(const BinaryExpr& node, std::shared_ptr<Environm
     if (node.op == ">") return JSValue::makeBool(toNumber(left) > toNumber(right));
     if (node.op == "<=") return JSValue::makeBool(toNumber(left) <= toNumber(right));
     if (node.op == ">=") return JSValue::makeBool(toNumber(left) >= toNumber(right));
+
+    // Bitwise operators
+    if (node.op == "&") return JSValue::makeNumber(static_cast<int>(toNumber(left)) & static_cast<int>(toNumber(right)));
+    if (node.op == "|") return JSValue::makeNumber(static_cast<int>(toNumber(left)) | static_cast<int>(toNumber(right)));
+    if (node.op == "^") return JSValue::makeNumber(static_cast<int>(toNumber(left)) ^ static_cast<int>(toNumber(right)));
+    if (node.op == "<<") return JSValue::makeNumber(static_cast<int>(toNumber(left)) << static_cast<int>(toNumber(right)));
+    if (node.op == ">>") return JSValue::makeNumber(static_cast<int>(toNumber(left)) >> static_cast<int>(toNumber(right)));
+    if (node.op == ">>>") return JSValue::makeNumber(static_cast<unsigned int>(toNumber(left)) >> static_cast<int>(toNumber(right)));
+
+    // in operator: check if property exists in object
+    if (node.op == "in") {
+        std::string prop = toString(left);
+        if (right.isObject()) {
+            auto obj = right.asObject();
+            return JSValue::makeBool(obj->properties.find(prop) != obj->properties.end());
+        }
+        if (right.isArray()) {
+            // For arrays, check if the key is a valid index
+            try {
+                size_t idx = std::stoul(prop);
+                return JSValue::makeBool(idx < right.asArray()->size());
+            } catch (...) {
+                if (prop == "length") return JSValue::makeBool(true);
+                return JSValue::makeBool(false);
+            }
+        }
+        throw TypeError("Cannot use 'in' operator to search for '" + prop + "' in " + toString(right));
+    }
+
+    // instanceof operator (basic support)
+    if (node.op == "instanceof") {
+        // For now, always return false since we don't have prototype chains
+        return JSValue::makeBool(false);
+    }
 
     return JSValue::makeUndefined();
 }
@@ -541,6 +576,14 @@ JSValue Interpreter::evalLiteral(const Literal& node, std::shared_ptr<Environmen
         case LiteralType::Undefined: return JSValue::makeUndefined();
     }
     return JSValue::makeUndefined();
+}
+
+JSValue Interpreter::evalStmtList(const StmtList& node, std::shared_ptr<Environment> env) {
+    JSValue result = JSValue::makeUndefined();
+    for (const auto& stmt : node.stmts) {
+        result = eval(*stmt, env);
+    }
+    return result;
 }
 
 // ==================== TYPE COERCION ====================

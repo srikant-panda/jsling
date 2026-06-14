@@ -1,4 +1,5 @@
 #include "jsling/parser.hpp"
+#include "jsling/lexer.hpp"
 #include "jsling/errors.hpp"
 #include <cstdlib>
 
@@ -64,18 +65,43 @@ std::unique_ptr<BlockStmt> Parser::parseBlock() {
 }
 
 std::unique_ptr<ASTNode> Parser::parseVarDecl() {
-    auto decl = std::make_unique<VarDecl>();
-    decl->kind = advance().lexeme; // var/let/const
+    std::string kind = advance().lexeme; // var/let/const
+
+    auto firstDecl = std::make_unique<VarDecl>();
+    firstDecl->kind = kind;
     if (check(TokenType::Identifier)) {
-        decl->name = advance().lexeme;
+        firstDecl->name = advance().lexeme;
     } else {
-        throw SyntaxError("Expected identifier after " + decl->kind + " at line " + std::to_string(current().line));
+        throw SyntaxError("Expected identifier after " + kind + " at line " + std::to_string(current().line));
     }
     if (match(TokenType::Equal)) {
-        decl->initializer = parseAssignmentExpression();
+        firstDecl->initializer = parseAssignmentExpression();
+    }
+
+    // Check for comma-separated declarations: let a = 1, b = 2;
+    if (!check(TokenType::Comma)) {
+        match(TokenType::Semicolon);
+        return firstDecl;
+    }
+
+    // Multiple declarations - wrap in a statement list (no scope)
+    auto list = std::make_unique<StmtList>();
+    list->stmts.push_back(std::move(firstDecl));
+    while (match(TokenType::Comma)) {
+        auto decl = std::make_unique<VarDecl>();
+        decl->kind = kind;
+        if (check(TokenType::Identifier)) {
+            decl->name = advance().lexeme;
+        } else {
+            throw SyntaxError("Expected identifier after ',' at line " + std::to_string(current().line));
+        }
+        if (match(TokenType::Equal)) {
+            decl->initializer = parseAssignmentExpression();
+        }
+        list->stmts.push_back(std::move(decl));
     }
     match(TokenType::Semicolon);
-    return decl;
+    return list;
 }
 
 std::unique_ptr<ASTNode> Parser::parseFunctionDecl() {
@@ -493,9 +519,7 @@ std::unique_ptr<ASTNode> Parser::parsePrimaryExpression() {
         return lit;
     }
     if (check(TokenType::TemplateLiteral)) {
-        auto tpl = std::make_unique<TemplateLiteral>();
-        tpl->strings.push_back(advance().lexeme);
-        return tpl;
+        return parseTemplateLiteral();
     }
     if (check(TokenType::True)) {
         advance();
@@ -657,8 +681,43 @@ std::unique_ptr<ASTNode> Parser::parseObjectLiteral() {
 }
 
 std::unique_ptr<ASTNode> Parser::parseTemplateLiteral() {
+    std::string raw = advance().lexeme;
     auto tpl = std::make_unique<TemplateLiteral>();
-    tpl->strings.push_back(advance().lexeme);
+
+    size_t i = 0;
+    std::string currentStr;
+    while (i < raw.size()) {
+        if (i + 1 < raw.size() && raw[i] == '$' && raw[i + 1] == '{') {
+            // Push the string part before this expression
+            tpl->strings.push_back(currentStr);
+            currentStr.clear();
+            i += 2; // skip ${
+
+            // Extract expression string, tracking brace depth
+            std::string exprStr;
+            int depth = 1;
+            while (i < raw.size() && depth > 0) {
+                if (raw[i] == '{') depth++;
+                else if (raw[i] == '}') {
+                    depth--;
+                    if (depth == 0) { i++; break; }
+                }
+                exprStr += raw[i];
+                i++;
+            }
+
+            // Sub-lex and sub-parse the expression
+            Lexer subLexer(exprStr);
+            auto subTokens = subLexer.tokenize();
+            Parser subParser(std::move(subTokens));
+            auto expr = subParser.parseExpression();
+            tpl->expressions.push_back(std::move(expr));
+        } else {
+            currentStr += raw[i];
+            i++;
+        }
+    }
+    tpl->strings.push_back(currentStr);
     return tpl;
 }
 
