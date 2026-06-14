@@ -1,77 +1,106 @@
 # jsling
 
-`jsling` is a from-scratch JavaScript-like runtime written in C++17. It is designed to behave like a small Node.js-style CLI for the supported language subset, without embedding V8, QuickJS, or any other JavaScript engine.
+A from-scratch JavaScript runtime written in C++17 — no V8, no QuickJS, no embedded engines. Built for **Thunder Hackathon 2.0**.
 
-The active implementation lives in `COMPILER_CPP/`.
+`jsling` lexes, parses, and interprets JavaScript source code with a tree-walking interpreter, supporting a growing subset of ES6+ features.
 
-## Features
+## Quick Start
 
-- Node-like CLI:
-  - `jsling script.js`
-  - `jsling -e "console.log(1 + 2)"`
-  - `jsling` for the REPL
-- Lexer, parser, AST, and tree-walking interpreter implemented in C++
-- JavaScript-style values: numbers, strings, booleans, arrays, objects, functions, `null`, and `undefined`
-- Core language support:
-  - variables with `var`, `let`, `const`, and comma-separated declarations (`let a = 1, b = 2`)
-  - functions, closures, recursion, and higher-order calls
-  - arrow functions: `x => x * 2`, `(a, b) => a + b`, `() => 42`
-  - default parameters: `function f(x = 1)`
-  - rest parameters: `function f(...args)`
-  - spread in calls, arrays, and object literals: `f(...arr)`, `[...a, ...b]`, `{...obj, z: 3}`
-  - template literals with expression interpolation: `` `Hello ${name}!` ``
-  - nested template literals: `` `outer ${`inner ${x}`}` ``
-  - `in` operator: `"name" in obj`
-  - bitwise operators: `&`, `|`, `^`, `<<`, `>>`, `>>>`
-  - postfix and prefix increment/decrement: `i++`, `++i`
-  - loops, conditionals, switch, break, and continue
-  - loose and strict equality (`==`, `===`)
-  - ternary operator: `x ? a : b`
-  - common array, string, number, Math, Date, Object, and console built-ins
-- Node-like value display for `console.log`
-- Windows GUI installer (`JSling-Setup.exe`) with PATH integration
-
-Some larger JavaScript features are still in progress, including destructuring, classes, `try/catch`, and full prototype chains.
-
-## Requirements
-
-- CMake 3.16 or newer
-- A C++17 compiler:
-  - Linux/macOS: `g++` or `clang++`
-  - Windows: Visual Studio Build Tools, LLVM/Clang, or MinGW
-- A build tool supported by CMake, such as Make, Ninja, or MSBuild
-
-## Build
-
-From the C++ project directory:
+### Linux / macOS
 
 ```bash
-cd COMPILER_CPP
+git clone https://github.com/srikant-panda/jsling.git
+cd jsling/COMPILER_CPP
 bash scripts/build.sh
 ```
 
-The binary is created at:
+### Windows
 
-```text
-COMPILER_CPP/build/jsling
+Open **Developer Command Prompt for VS 2022+**, then:
+
+```cmd
+git clone https://github.com/srikant-panda/jsling.git
+cd jsling\COMPILER_CPP
+mkdir build && cd build
+cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
+nmake
 ```
 
-On Windows, CMake may place the executable under a configuration directory such as:
+Or just download `JSling-Setup.exe` from the [releases page](https://github.com/srikant-panda/jsling/releases) and install.
 
-```text
-COMPILER_CPP/build/Release/jsling.exe
-```
-
-## Run
+## Run It
 
 ```bash
-cd COMPILER_CPP
+# Run a script
+./build/jsling script.js
 
-./build/jsling --version
+# Evaluate an expression
 ./build/jsling -e "console.log(1 + 2)"
-./build/jsling path/to/script.js
+
+# Start the REPL
 ./build/jsling
 ```
+
+On Windows, use `build\jsling.exe` (or `build-windows\jsling.exe`).
+
+## Try It Out
+
+Create a file `demo.js`:
+
+```javascript
+// Template literals
+let name = "World";
+console.log(`Hello, ${name}!`);
+
+// Arrow functions
+let double = x => x * 2;
+console.log(double(21)); // 42
+
+// Rest & spread
+function sum(...nums) {
+    let total = 0;
+    for (let i = 0; i < nums.length; i++) {
+        total = total + nums[i];
+    }
+    return total;
+}
+let arr = [1, 2, 3, 4];
+console.log(sum(...arr)); // 10
+
+// Array methods
+let names = ["Alice", "Bob", "Charlie"];
+names.filter(n => n.length > 3).forEach(n => console.log(n));
+
+// Objects
+let person = { name: "JSling", version: "1.0.0" };
+console.log(`Running ${person.name} v${person.version}`);
+```
+
+```bash
+./build/jsling demo.js
+```
+
+## Features
+
+**Language:**
+- `var`, `let`, `const` with comma-separated declarations (`let a = 1, b = 2`)
+- Functions, closures, recursion, higher-order functions
+- Arrow functions: `x => x * 2`, `(a, b) => a + b`, `() => 42`
+- Default parameters: `function f(x = 1)`
+- Rest parameters: `function f(...args)`
+- Spread: `f(...arr)`, `[...a, ...b]`, `{...obj, z: 3}`
+- Template literals: `` `Hello ${name}!` `` (including nested)
+- `in` operator, bitwise ops (`&`, `|`, `^`, `<<`, `>>`, `>>>`)
+- Prefix/postfix `++`/`--`, ternary `? :`
+- `for`, `while`, `do-while`, `switch`, `break`, `continue`
+- `==`, `===`, `!=`, `!==`, `<`, `>`, `<=`, `>=`
+
+**Built-ins:**
+- `console.log`, `Math.*`, `Date`, `parseInt`, `parseFloat`
+- Array: `map`, `filter`, `reduce`, `forEach`, `find`, `some`, `every`, `sort`, `splice`, `slice`, `join`, `includes`, `indexOf`, `push`, `pop`, `shift`, `unshift`, `reverse`, `concat`
+- String: `split`, `slice`, `includes`, `indexOf`, `replace`, `replaceAll`, `trim`, `toUpperCase`, `toLowerCase`, `startsWith`, `endsWith`, `repeat`, `padStart`, `padEnd`, `charAt`, `substring`, `concat`
+- Number: `toFixed`, `toString(radix)`
+- Object: `keys`, `values`, `entries`, `assign`, `freeze`
 
 ## Test
 
@@ -80,86 +109,57 @@ cd COMPILER_CPP
 bash scripts/run-tests.sh
 ```
 
-The test runner builds the binary if needed, runs each `.js` file in `COMPILER_CPP/tests/`, and compares output with the matching `.expected` file. Tests with a `.skip` file are skipped with the reason shown in the output.
+Runs all `.js` files in `tests/` and compares output against `.expected` files.
 
-## Install
+## Install System-Wide
 
-### Linux/macOS
-
-Install from the local source tree:
-
+**Linux/macOS:**
 ```bash
 cd COMPILER_CPP
-bash scripts/install-local.sh
+bash scripts/install-local.sh    # installs to /usr/local/bin or ~/.local/bin
 ```
 
-Choose a custom prefix:
-
-```bash
-bash scripts/install-local.sh --prefix "$HOME/.local"
-```
-
-Uninstall:
-
-```bash
-bash scripts/install-local.sh --uninstall
-```
-
-### Windows
-
-**Option A — GUI Installer (recommended):**
-
-Download `JSling-Setup.exe` from the [releases page](https://github.com/srikant-panda/jsling/releases) and run it. The installer adds jsling to your PATH automatically.
-
-**Option B — Build from source:**
-
-Open **Developer Command Prompt for VS** and run:
-
+**Windows:** Download `JSling-Setup.exe` from releases, or:
 ```cmd
-cd COMPILER_CPP
-mkdir build-windows && cd build-windows
-cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
-nmake
-```
-
-The binary is at `COMPILER_CPP\build-windows\jsling.exe`.
-
-**Option C — PowerShell:**
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1 -AddToPath
-```
-
-## Project Layout
-
-```text
-.
-├── README.md                  # Project overview and commands
-├── INSTALL.md                 # Detailed installation guide
-├── CPP_IMPLEMENTATION.md      # Implementation blueprint and status
-├── jsling.iss                 # Inno Setup script for Windows installer
-├── build-installer.bat        # Automated Windows build script
-├── assets/                    # Icons and branding
-│   ├── jsling.ico             # Windows installer icon
-│   └── jsling.svg             # Source SVG
-└── COMPILER_CPP/
-    ├── CMakeLists.txt
-    ├── include/jsling/        # Public headers
-    ├── src/                   # C++ implementation
-    ├── scripts/               # Build, test, and installer scripts
-    └── tests/                 # JavaScript tests and expected output
+build-installer.bat
 ```
 
 ## Architecture
 
-```text
+```
 JavaScript source
-  -> Lexer
-  -> Parser
-  -> AST
-  -> Interpreter
-  -> Environment + built-ins
-  -> stdout/stderr
+  → Lexer (tokenization)
+  → Parser (recursive descent + precedence climbing)
+  → AST
+  → Interpreter (tree-walking)
+  → Environment chain + built-ins
+  → Output
 ```
 
-The design notes and implementation roadmap are documented in `CPP_IMPLEMENTATION.md`.
+## Project Layout
+
+```
+.
+├── README.md                  # This file
+├── INSTALL.md                 # Detailed installation guide
+├── CPP_IMPLEMENTATION.md      # Implementation blueprint & status
+├── jsling.iss                 # Windows installer (Inno Setup)
+├── build-installer.bat        # Automated Windows build
+├── assets/                    # Icons & branding
+└── COMPILER_CPP/
+    ├── CMakeLists.txt
+    ├── include/jsling/        # Headers (lexer, parser, AST, interpreter, values)
+    ├── src/                   # C++ implementation
+    ├── scripts/               # Build, test, & install scripts
+    └── tests/                 # Test suite
+```
+
+## Status
+
+Core interpreter is **complete and working** (Phases 1–4). ES6+ features like arrow functions, template literals, rest/spread, and the `in` operator are implemented. Planned: destructuring, `try/catch`, classes, `for...of`, prototype chains.
+
+See [CPP_IMPLEMENTATION.md](CPP_IMPLEMENTATION.md) for the full status table.
+
+---
+
+*Built for Thunder Hackathon 2.0 — June 2026*
