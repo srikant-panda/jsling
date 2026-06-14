@@ -1,0 +1,38 @@
+#include "jsling/environment.hpp"
+#include "jsling/errors.hpp"
+
+namespace jsling {
+
+Environment::Environment(std::shared_ptr<Environment> parent) : parent_(std::move(parent)) {}
+
+void Environment::define(const std::string& name, JSValue value) {
+    vars_[name] = std::move(value);
+}
+
+JSValue Environment::get(const std::string& name) const {
+    auto it = vars_.find(name);
+    if (it != vars_.end()) return it->second;
+    if (parent_) return parent_->get(name);
+    throw ReferenceError(name + " is not defined");
+}
+
+void Environment::set(const std::string& name, JSValue value) {
+    auto it = vars_.find(name);
+    if (it != vars_.end()) {
+        it->second = std::move(value);
+        return;
+    }
+    if (parent_) {
+        parent_->set(name, std::move(value));
+        return;
+    }
+    throw ReferenceError(name + " is not defined");
+}
+
+bool Environment::has(const std::string& name) const {
+    if (vars_.find(name) != vars_.end()) return true;
+    if (parent_) return parent_->has(name);
+    return false;
+}
+
+} // namespace jsling
