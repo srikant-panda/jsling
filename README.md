@@ -104,6 +104,36 @@ console.log(`Running ${person.name} v${person.version}`);
 
 ## Test
 
+### Hackathon Evaluation Test Cases (5 × 20 pts = 100 pts)
+
+Run the official hackathon test suite with verbose output:
+
+```bash
+cd COMPILER_CPP
+bash scripts/run-hackathon-tests.sh
+```
+
+| TC | Test Case | Concept | Points | Status |
+|----|-----------|---------|--------|--------|
+| TC-1 | Odd / Even Checker | `if/else`, modulo, string concat | 20 | ✅ Pass |
+| TC-2 | Triangle Pattern | Nested `for` loops, string building | 20 | ✅ Pass |
+| TC-3 | Armstrong Number | `while` loop, `Math.floor`, `**` operator, functions | 20 | ✅ Pass |
+| TC-4 | Array Reverse | Spread `[...arr]`, `.reverse()`, `.join()` | 20 | ✅ Pass |
+| TC-5 | String Palindrome | `.split("")`, `.reverse()`, `.join(""), strict equality | 20 | ✅ Pass |
+
+Test files are in `COMPILER_CPP/tests/hackathon/`:
+
+```
+tests/hackathon/
+├── tc1_odd_even.js + .expected
+├── tc2_triangle.js + .expected
+├── tc3_armstrong.js + .expected
+├── tc4_array_reverse.js + .expected
+└── tc5_palindrome.js + .expected
+```
+
+### Full Test Suite
+
 ```bash
 cd COMPILER_CPP
 bash scripts/run-tests.sh
