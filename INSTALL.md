@@ -79,22 +79,39 @@ jsling --version
 .\scripts\install-windows.ps1 -Uninstall
 ```
 
-### Build the Downloadable Setup Installer (.exe)
+### Build the GUI Installer (.exe)
 
-If you want to build a standalone, downloadable GUI installer (`JSling-Setup.exe`) similar to Git or Node.js downloads:
+The project includes an Inno Setup script (`jsling.iss`) that produces a professional Windows installer (`JSling-Setup.exe`) with:
+- Wizard-style GUI installation
+- Automatic PATH integration
+- Desktop shortcut option
+- Clean uninstaller
 
-1. Build the release binary `jsling.exe` on Windows (using CMake or the PowerShell install script).
-2. Copy the compiled `jsling.exe` binary to the project root directory (where `jsling.iss` is located).
-3. Install [Inno Setup 6](https://jrsoftware.org/isinfo.php).
-4. Compile the `jsling.iss` file located in the project root directory:
-   ```cmd
-   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" jsling.iss
-   ```
-5. This will generate `JSling-Setup.exe` in the root directory.
-6. Copy the generated setup file to the website's downloads directory so the web server can serve it:
-   ```cmd
-   copy JSling-Setup.exe website\downloads\
-   ```
+**Prerequisites:**
+- Visual Studio Build Tools (with "Desktop development with C++")
+- CMake (https://cmake.org/download/)
+- Inno Setup 6 (https://jrsoftware.org/isdl.php)
+
+**Steps (in Developer Command Prompt for VS):**
+
+```cmd
+cd C:\path\to\jsling\COMPILER_CPP
+mkdir build-windows && cd build-windows
+cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
+nmake
+cd ..\..
+mkdir dist
+copy COMPILER_CPP\build-windows\jsling.exe jsling.exe
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" jsling.iss
+```
+
+The installer is generated at `dist\JSling-Setup.exe`.
+
+**Or use the automated script:**
+
+```cmd
+build-installer.bat
+```
 
 ## Verify Installation
 

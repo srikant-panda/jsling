@@ -9,7 +9,7 @@
 #define MyAppExeName "jsling.exe"
 
 [Setup]
-AppId={5E615B9F-8BE5-4089-BB8B-BF06A42921D3}
+AppId={{5E615B9F-8BE5-4089-BB8B-BF06A42921D3}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
@@ -40,23 +40,32 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [Files]
 Source: "jsling.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "assets\jsling.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\JSling REPL"; Filename: "{cmd}"; Parameters: "/k ""{app}\jsling.exe"""; WorkingDir: "{%USERPROFILE}"; Comment: "Start JSling JavaScript REPL"
+Name: "{group}\JSling REPL"; Filename: "{cmd}"; Parameters: "/k ""{app}\jsling.exe"""; WorkingDir: "{%USERPROFILE}"; IconFilename: "{app}\jsling.ico"; Comment: "Start JSling JavaScript REPL"
 Name: "{group}\Uninstall JSling"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\JSling"; Filename: "{cmd}"; Parameters: "/k ""{app}\jsling.exe"""; WorkingDir: "{%USERPROFILE}"; Tasks: desktopicon
+Name: "{autodesktop}\JSling"; Filename: "{cmd}"; Parameters: "/k ""{app}\jsling.exe"""; WorkingDir: "{%USERPROFILE}"; IconFilename: "{app}\jsling.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{cmd}"; Parameters: "/k ""{app}\jsling.exe"" --version"; Description: "Verify installation"; Flags: postinstall nowait skipifsilent
 Filename: "{cmd}"; Parameters: "/k ""{app}\jsling.exe"""; Description: "Launch JSling REPL"; Flags: postinstall nowait skipifsilent unchecked
 
 [UninstallDelete]
-Type: filesandirs; Name: "{app}"
+Type: filesandordirs; Name: "{app}"
 
 [Registry]
 Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: NeedsAddPath_User; Tasks: envPath
 
 [Code]
+// Win32 API import - required for BroadcastPathChange below
+// Note: lParam is declared as 'string' so Inno's marshaling passes a
+// pointer to the string data automatically (the standard pattern for
+// broadcasting WM_SETTINGCHANGE with "Environment" as lParam).
+function SendMessageTimeout(hWnd: Longint; Msg: Longint; wParam: Longint; lParam: string;
+  fuFlags: Longint; uTimeout: Longint; var lpdwResult: DWORD): Longint;
+  external 'SendMessageTimeoutW@user32.dll stdcall';
+
 // Helper function to check if the app directory is already in the User Path
 function NeedsAddPath_User(): Boolean;
 var
@@ -72,23 +81,23 @@ begin
   end;
 end;
 
-// Broadcast WM_SETTINGCHANGE so Explorer picks up PATH changes immediately
+// Broadcast WM_SETTINGCHANGE so Explorer/new terminals pick up PATH changes immediately
 procedure BroadcastPathChange();
 var
   MsgResult: DWORD;
 begin
   SendMessageTimeout(
-    HWND_BROADCAST,
-    $001A, // WM_SETTINGCHANGE
+    $FFFF,  // HWND_BROADCAST
+    $001A,  // WM_SETTINGCHANGE
     0,
-    LPARAM('Environment'),
-    SMTO_ABORTIFHUNG,
+    'Environment',
+    2,      // SMTO_ABORTIFHUNG
     5000,
     MsgResult
   );
 end;
 
-// Procedure to remove the directory from Path on Uninstall
+// Procedure to remove the install directory from the User PATH on uninstall
 procedure RemovePathFromUserEnv();
 var
   OldPath: string;
@@ -123,9 +132,10 @@ begin
   end;
 end;
 
-procedure CurUninstallStepChanged(JustAfterAnUninstallStep: TUninstallStep);
+// On uninstall, clean up the PATH entry we added
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
-  if JustAfterAnUninstallStep = usPostUninstall then
+  if CurUninstallStep = usPostUninstall then
   begin
     RemovePathFromUserEnv();
   end;

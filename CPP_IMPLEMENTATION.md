@@ -1012,3 +1012,51 @@ When in doubt about behavior, run the same script in **Node.js** and match its o
 ---
 
 *Blueprint for jsling C++ port — Thunder Hackathon 2.0, June 2026.*
+
+---
+
+## Current Implementation Status (June 2026)
+
+The C++ implementation is complete through Phases 1–4 with additional ES6+ features.
+
+### Completed
+
+| Category | Feature | Status |
+|----------|---------|--------|
+| **Lexer** | Numbers, strings, template literals, operators, keywords | ✅ |
+| **Lexer** | Nested template literal `${...}` with brace-depth tracking | ✅ |
+| **Parser** | Full expression precedence climbing | ✅ |
+| **Parser** | Arrow functions: `x => x*2`, `(a,b) => a+b`, `() => expr` | ✅ |
+| **Parser** | Rest parameters: `function f(...args)` | ✅ |
+| **Parser** | Default parameters: `function f(x = 1)` | ✅ |
+| **Parser** | Spread in calls, arrays, objects | ✅ |
+| **Parser** | Template literal expression interpolation: `` `Hello ${name}` `` | ✅ |
+| **Parser** | Comma-separated var decls: `let a = 1, b = 2` | ✅ |
+| **Parser** | Postfix/prefix `++`/`--` | ✅ |
+| **Interpreter** | Variables (`var`/`let`/`const`), closures, scopes | ✅ |
+| **Interpreter** | `in` operator: `"name" in obj` | ✅ |
+| **Interpreter** | `instanceof` operator (basic) | ✅ |
+| **Interpreter** | Bitwise ops: `&`, `\|`, `^`, `<<`, `>>`, `>>>` | ✅ |
+| **Built-ins** | `console.log`, `Math.*`, `Date`, `Object.keys/values/entries` | ✅ |
+| **Built-ins** | Array methods: `map`, `filter`, `reduce`, `forEach`, `find`, `sort`, `splice`, etc. | ✅ |
+| **Built-ins** | String methods: `split`, `slice`, `includes`, `replace`, `padStart/End`, etc. | ✅ |
+| **Built-ins** | Number methods: `toFixed`, `toString(radix)` | ✅ |
+| **CLI** | REPL with multi-line input support | ✅ |
+| **CLI** | Script execution: `jsling script.js` | ✅ |
+| **CLI** | Inline eval: `jsling -e "expr"` | ✅ |
+| **Installer** | Windows GUI installer (Inno Setup) with PATH, shortcuts, uninstaller | ✅ |
+| **Installer** | Cross-platform install scripts (Linux/macOS) | ✅ |
+| **Tests** | Automated test runner with expected output comparison | ✅ |
+
+### In Progress / Planned
+
+| Feature | Notes |
+|---------|-------|
+| Destructuring | `let {a, b} = obj`, `let [x, y] = arr` |
+| `try/catch/finally` | Error handling with `throw` |
+| Classes | `class Foo extends Bar` with constructors and methods |
+| `for...of` / `for...in` | Iterator-based loops |
+| Prototype chains | `__proto__`, `Object.create` |
+| `import`/`export` | ES module support |
+| `async`/`await` | Promise-based async |
+| Nested template literals | Partially working (lexer handles it, edge cases remain) |
