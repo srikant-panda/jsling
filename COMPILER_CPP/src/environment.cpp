@@ -3,7 +3,18 @@
 
 namespace jsling {
 
-Environment::Environment(std::shared_ptr<Environment> parent) : parent_(std::move(parent)) {}
+Environment::Environment(std::shared_ptr<Environment> parent) 
+    : isFunctionOrGlobal(parent == nullptr), parent_(std::move(parent)) {}
+
+std::shared_ptr<Environment> Environment::getFunctionOrGlobalEnv() {
+    if (isFunctionOrGlobal) {
+        return shared_from_this();
+    }
+    if (parent_) {
+        return parent_->getFunctionOrGlobalEnv();
+    }
+    return shared_from_this();
+}
 
 void Environment::define(const std::string& name, JSValue value) {
     vars_[name] = std::move(value);

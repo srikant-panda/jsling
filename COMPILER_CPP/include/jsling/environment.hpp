@@ -15,9 +15,13 @@ public:
     void set(const std::string& name, JSValue value);
     bool has(const std::string& name) const;
 
+    bool isFunctionOrGlobal = false;
+    std::shared_ptr<Environment> getFunctionOrGlobalEnv();
+
 private:
     std::shared_ptr<Environment> parent_;
     std::unordered_map<std::string, JSValue> vars_;
 };
 
 } // namespace jsling
+

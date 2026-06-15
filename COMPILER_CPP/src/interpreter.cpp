@@ -126,7 +126,11 @@ JSValue Interpreter::evalVarDecl(const VarDecl& node, std::shared_ptr<Environmen
     if (node.initializer) {
         value = eval(*node.initializer, env);
     }
-    env->define(node.name, value);
+    auto targetEnv = env;
+    if (node.kind == "var") {
+        targetEnv = env->getFunctionOrGlobalEnv();
+    }
+    targetEnv->define(node.name, value);
     return value;
 }
 
@@ -156,6 +160,7 @@ JSValue Interpreter::evalFunctionDecl(const FunctionDecl& node, std::shared_ptr<
                 node.name,
                 [declPtr, closureEnv, this](const std::vector<JSValue>& args) -> JSValue {
                     auto fnEnv = std::make_shared<Environment>(closureEnv);
+                    fnEnv->isFunctionOrGlobal = true;
                     bindFunctionArgs(*declPtr, fnEnv, args, *this);
                     try {
                         for (const auto& stmt : declPtr->body->body) {
@@ -178,6 +183,7 @@ JSValue Interpreter::evalFunctionDecl(const FunctionDecl& node, std::shared_ptr<
             "",
             [declPtr, closureEnv, this](const std::vector<JSValue>& args) -> JSValue {
                 auto fnEnv = std::make_shared<Environment>(closureEnv);
+                fnEnv->isFunctionOrGlobal = true;
                 bindFunctionArgs(*declPtr, fnEnv, args, *this);
                 try {
                     for (const auto& stmt : declPtr->body->body) {
@@ -913,6 +919,7 @@ JSValue Interpreter::callFunction(const std::shared_ptr<JSFunction>& fn,
                                    const std::vector<JSValue>& args,
                                    JSValue) {
     auto fnEnv = std::make_shared<Environment>(fn->closure);
+    fnEnv->isFunctionOrGlobal = true;
     for (size_t i = 0; i < fn->params.size(); ++i) {
         fnEnv->define(fn->params[i], i < args.size() ? args[i] : JSValue::makeUndefined());
     }

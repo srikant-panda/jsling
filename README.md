@@ -248,7 +248,7 @@ When looking up a variable:
 
 | Category | Supported Features & Syntax |
 |---|---|
-| **Variables & Binding** | `var`, `let`, `const` (with block scoping and comma-separated declarations, e.g., `let a = 1, b = 2`) |
+| **Variables & Binding** | `let` & `const` (block-scoped), `var` (function-scoped), with comma-separated declarations (e.g., `let a = 1, b = 2`) |
 | **Functions** | First-class functions, closures, recursion, lexical scope, arrow functions (`x => x * 2`), and default parameters |
 | **Parameters & Spread** | Rest parameters (`function f(...args)`), spread arguments (`f(...arr)`), array/object spread (`[...a, ...b]`, `{...obj, z: 3}`) |
 | **Control Flow** | `if-else`, loops (`for`, `while`, `do-while`), `switch-case`, control flow statements (`break`, `continue`, `return`) |
