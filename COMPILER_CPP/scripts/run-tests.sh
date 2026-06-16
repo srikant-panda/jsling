@@ -22,6 +22,11 @@ BUILD_DIR="$PROJECT_DIR/build"
 TEST_DIR="$PROJECT_DIR/tests"
 JSLING="$BUILD_DIR/jsling"
 
+# Windows: append .exe if the binary has that extension
+if [ -f "$BUILD_DIR/jsling.exe" ]; then
+    JSLING="$BUILD_DIR/jsling.exe"
+fi
+
 # --- Parse arguments ---
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -94,10 +99,10 @@ run_test() {
     # Run the test
     local actual exit_code
     exit_code=0
-    actual="$("$JSLING" "$js_file" 2>&1)" || exit_code=$?
+    actual="$("$JSLING" "$js_file" 2>&1 | tr -d '\r')" || exit_code=$?
 
     local expected
-    expected="$(cat "$expected_file")"
+    expected="$(cat "$expected_file" | tr -d '\r')"
 
     # Handle pattern matching for non-deterministic output
     # Lines starting with ~ are regex patterns instead of exact match
@@ -172,10 +177,14 @@ if [ ${#FAIL_DETAILS[@]} -gt 0 ]; then
         echo "$actual" | sed 's/^/    /'
         echo ""
         echo -e "  ${DIM}Diff:${RESET}"
-        diff --color=always \
-            <(echo "$expected") \
-            <(echo "$actual") \
-            2>/dev/null | sed 's/^/    /' || true
+        if command -v diff > /dev/null 2>&1; then
+            diff --color=always \
+                <(echo "$expected") \
+                <(echo "$actual") \
+                2>/dev/null | sed 's/^/    /' || true
+        else
+            echo "    (diff not available)" 
+        fi
     done
 fi
 
