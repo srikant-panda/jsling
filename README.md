@@ -415,16 +415,6 @@ This script executes all `.js` files in `tests/` and automatically compares thei
 cd COMPILER_CPP
 bash scripts/install-local.sh    # Installs executable to /usr/local/bin or ~/.local/bin
 ```
-
-### 🪟 Windows
-To build and package a native Windows executable installer:
-```cmd
-build-installer.bat
-```
-This generates the GUI setup wizard in `dist\JSling-Setup.exe` using Inno Setup.
-
-For detailed setup walkthroughs and troubleshooting, see [INSTALL.md](file:///home/hariomm/Projects/jsling/INSTALL.md).
-
 ---
 
 ## Project Structure & Navigation
