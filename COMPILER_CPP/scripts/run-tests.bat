@@ -5,6 +5,9 @@ REM Usage: scripts\run-tests.bat [--filter <pattern>]
 REM =============================================================================
 setlocal enabledelayedexpansion
 
+REM Capture CR character for CRLF stripping
+for /f %%a in ('copy /Z "%~f0" nul') do set "CR=%%a"
+
 set "SCRIPT_DIR=%~dp0"
 set "PROJECT_DIR=%SCRIPT_DIR%.."
 set "BUILD_DIR=%PROJECT_DIR%\build"
@@ -139,6 +142,7 @@ set /a EXP_N=0
 for /f "delims=" %%L in ('findstr /N "^" "%EXPECTED_FILE%"') do (
     set "RAWLINE=%%L"
     set "STRIPPED=!RAWLINE:*:=!"
+    set "STRIPPED=!STRIPPED:%CR%=!"
     set /a EXP_N+=1
     set "EXP_LINE_!EXP_N!=!STRIPPED!"
 )
@@ -147,6 +151,7 @@ set /a ACT_N=0
 for /f "delims=" %%L in ('findstr /N "^" "%ACTUAL_FILE%"') do (
     set "RAWLINE=%%L"
     set "STRIPPED=!RAWLINE:*:=!"
+    set "STRIPPED=!STRIPPED:%CR%=!"
     set /a ACT_N+=1
     set "ACT_LINE_!ACT_N!=!STRIPPED!"
 )

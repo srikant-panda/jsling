@@ -17,13 +17,52 @@
 
 ---
 
+## For Hackathon Judges
+
+**Zero setup required.** The pre-built binary is shipped at `bin\jsling.exe`. No build tools, no MinGW, no Visual Studio, no PATH changes needed.
+
+### Running any JavaScript file
+
+```cmd
+bin\jsling.exe your_testcase.js
+```
+
+Output is printed to stdout, matching Node.js `console.log` formatting.
+
+### Usage
+
+```cmd
+REM Run a .js file
+bin\jsling.exe test.js
+
+REM Evaluate an inline expression
+bin\jsling.exe -e "console.log(1 + 2)"
+
+REM Start the interactive REPL
+bin\jsling.exe
+```
+
+### Interactive Menu
+
+Double-click `run.bat` at the project root for a menu with demo script, hackathon test suite, full test suite, REPL, and inline eval.
+
+### Official Hackathon Test Suite
+
+```cmd
+COMPILER_CPP\scripts\run-hackathon-testcase.bat
+```
+
+Runs 5 test cases (20 pts each = 100 pts total) with verbose output showing source code, actual vs expected, and pass/fail status.
+
+---
+
 `jsling` lexes, parses, and interprets JavaScript source code using a tree-walking interpreter, supporting a wide subset of ES6+ features. Designed to match Node.js behavior, output formatting, CLI flags, interactive REPL behavior, and diagnostic error reporting.
 
 ---
 
 ## Quick Start
 
-### 🐧 Linux / macOS
+### Linux / macOS
 
 ```bash
 git clone https://github.com/srikant-panda/jsling.git
@@ -31,13 +70,28 @@ cd jsling/COMPILER_CPP
 bash scripts/build.sh
 ```
 
-### 🪟 Windows
+**Prerequisites:** `gcc`/`g++` (C++17), `cmake`, `make`
 
-Open **Developer Command Prompt for VS 2022+**, then run:
+### Windows (MinGW)
+
+Open any **Command Prompt** or **PowerShell** with MinGW on your PATH:
+
+```cmd
+git clone https://github.com/srikant-panda/jsling.git
+cd jsling\COMPILER_CPP
+scripts\build.bat
+```
+
 **Prerequisites:**
-- Visual Studio Build Tools (with "Desktop development with C++")
-- CMake (https://cmake.org/download/)
-- Inno Setup 6 (https://jrsoftware.org/isdl.php)
+- [MinGW-w64](https://www.mingw-w64.org/) (`gcc`, `g++`, `mingw32-make`) on PATH
+- [CMake](https://cmake.org/download/) on PATH
+- No Visual Studio or Developer Command Prompt needed
+
+The build script uses `cmake -G "MinGW Makefiles"` and `mingw32-make` automatically.
+
+### Windows (Visual Studio)
+
+Open **Developer Command Prompt for VS 2022+**:
 
 ```cmd
 git clone https://github.com/srikant-panda/jsling.git
@@ -47,6 +101,10 @@ cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
 nmake
 ```
 
+**Prerequisites:**
+- Visual Studio Build Tools (with "Desktop development with C++")
+- [CMake](https://cmake.org/download/)
+
 > [!TIP]
 > Alternatively, download the precompiled GUI installer `JSling-Setup.exe` from the [releases page](https://github.com/srikant-panda/jsling/releases) to install system-wide in one click.
 
@@ -54,6 +112,7 @@ nmake
 
 ## Run It
 
+**Linux / macOS:**
 ```bash
 # Run a script file
 ./build/jsling script.js
@@ -65,7 +124,17 @@ nmake
 ./build/jsling
 ```
 
-*On Windows, use `build\jsling.exe` (or `build-windows\jsling.exe`).*
+**Windows:**
+```cmd
+REM Run a script file
+build\jsling.exe script.js
+
+REM Evaluate an expression directly
+build\jsling.exe -e "console.log(1 + 2)"
+
+REM Start the interactive REPL
+build\jsling.exe
+```
 
 ---
 
@@ -103,8 +172,15 @@ console.log(`Running ${person.name} v${person.version}`);
 ```
 
 Run it with:
+
+**Linux / macOS:**
 ```bash
 ./build/jsling demo.js
+```
+
+**Windows:**
+```cmd
+build\jsling.exe demo.js
 ```
 
 ---
@@ -285,14 +361,23 @@ When looking up a variable:
 
 ## Hackathon Evaluation Test Cases
 
-**5 test cases × 20 points = 100 points total**
+**5 test cases x 20 points = 100 points total**
 
 Run the official hackathon evaluation test suite with full verbose output (source code, actual vs expected, pass/fail per test):
 
+**Linux / macOS:**
 ```bash
 cd COMPILER_CPP
 bash scripts/run-hackathon-testcase.sh
 ```
+
+**Windows (MinGW):**
+```cmd
+cd COMPILER_CPP
+scripts\run-hackathon-testcase.bat
+```
+
+The `.bat` runner auto-builds with MinGW if the binary is not found.
 
 ### Test Case Overview
 
@@ -403,22 +488,39 @@ COMPILER_CPP/tests/hackathon_testcase/
 
 ### Full Test Suite
 
+**Linux / macOS:**
 ```bash
 cd COMPILER_CPP
 bash scripts/run-tests.sh
 ```
 
-This script executes all `.js` files in `tests/` and automatically compares their terminal outputs against `.expected` files.
+**Windows (MinGW):**
+```cmd
+cd COMPILER_CPP
+scripts\run-tests.bat
+scripts\run-tests.bat --filter basics    REM run only matching tests
+```
+
+These scripts execute all `.js` files in `tests/` and automatically compare their terminal outputs against `.expected` files. The Windows `.bat` runner auto-builds with MinGW if the binary is not found.
 
 ---
 
 ## System Installation
 
-### 🐧 Linux / macOS
+### Linux / macOS
 ```bash
 cd COMPILER_CPP
 bash scripts/install-local.sh    # Installs executable to /usr/local/bin or ~/.local/bin
 ```
+
+### Windows
+The `build\jsling.exe` binary produced by `scripts\build.bat` is standalone -- just add the `COMPILER_CPP\build` folder to your system `PATH`.
+
+Alternatively, use the GUI installer:
+1. Install [Inno Setup 6](https://jrsoftware.org/isdl.php)
+2. Run `build-installer.bat` from the project root to generate `JSling-Setup.exe`
+3. Distribute or run the installer for system-wide installation
+
 ---
 
 ## Project Structure & Navigation
@@ -426,6 +528,8 @@ bash scripts/install-local.sh    # Installs executable to /usr/local/bin or ~/.l
 Below is a detailed map of the project files. Every file and folder name is a clickable link to let you explore the source code directly:
 
 * [README.md](file:///home/hariomm/Projects/jsling/README.md) — Main landing page & architecture overview
+* [run.bat](file:///home/hariomm/Projects/jsling/run.bat) — One-click launcher for Windows (judges: double-click this)
+* [bin/](file:///home/hariomm/Projects/jsling/bin) — Pre-built `jsling.exe` binary (shipped with repo, no build needed)
 * [INSTALL.md](file:///home/hariomm/Projects/jsling/INSTALL.md) — Detailed installation & build instructions
 * [CPP_IMPLEMENTATION.md](file:///home/hariomm/Projects/jsling/CPP_IMPLEMENTATION.md) — Detailed implementation blueprint & status checklist
 * [build-installer.bat](file:///home/hariomm/Projects/jsling/build-installer.bat) — Automated batch script to package Windows binary
@@ -461,10 +565,13 @@ Below is a detailed map of the project files. Every file and folder name is a cl
     * [inspect.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/inspect.cpp) — Formatter for array formatting, spacing, and quotes
     * [cli.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/cli.cpp) — Interactive REPL and file execution runner
   * [scripts/](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts) — Build & Automation Scripts
-    * [build.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/build.sh) — Easy compiler builder script
+    * [build.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/build.sh) — Linux/macOS build script
+    * [build.bat](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/build.bat) — Windows MinGW build script
     * [install-local.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/install-local.sh) — User bin local installer script
-    * [run-tests.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-tests.sh) — Full validation tests runner
-    * [run-hackathon-testcase.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-hackathon-testcase.sh) — Official hackathon evaluation runner
+    * [run-tests.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-tests.sh) — Linux/macOS test runner
+    * [run-tests.bat](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-tests.bat) — Windows MinGW test runner
+    * [run-hackathon-testcase.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-hackathon-testcase.sh) — Linux/macOS hackathon evaluation runner
+    * [run-hackathon-testcase.bat](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-hackathon-testcase.bat) — Windows MinGW hackathon evaluation runner
 
 ---
 
