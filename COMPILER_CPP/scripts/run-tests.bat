@@ -5,9 +5,6 @@ REM Usage: scripts\run-tests.bat [--filter <pattern>]
 REM =============================================================================
 setlocal enabledelayedexpansion
 
-REM Capture CR character for CRLF stripping
-for /f %%a in ('copy /Z "%~f0" nul') do set "CR=%%a"
-
 REM --- ANSI colors (Windows 10+ Terminal) ---
 for /F "delims=#" %%E in ('"prompt #$E# & for %%a in (1) do rem"') do set "ESC=%%E"
 set "RED=!ESC![0;31m"
@@ -96,8 +93,9 @@ set /a FAILED=0
 set /a SKIPPED=0
 set "FAIL_LIST="
 
-REM --- Temp file ---
-set "ACTUAL_FILE=%TEMP%\jsling_actual_%RANDOM%.tmp"
+REM --- Temp files ---
+set "ACT_FILE=%TEMP%\jsling_act_%RANDOM%.tmp"
+set "EXP_FILE=%TEMP%\jsling_exp_%RANDOM%.tmp"
 
 echo.
 echo %BOLD%jsling test suite%RESET%
@@ -112,7 +110,7 @@ REM --- Run all .js test files ---
 for %%F in ("%TEST_DIR%\*.js") do call :run_test "%%~fF"
 
 REM --- Summary ---
-if exist "%ACTUAL_FILE%" del "%ACTUAL_FILE%" >nul 2>&1
+for %%T in ("%ACT_FILE%" "%EXP_FILE%") do if exist %%T del %%T >nul 2>&1
 
 echo.
 echo %BOLD%Results:%RESET%  %GREEN%%PASSED% passed%RESET%, %RED%%FAILED% failed%RESET%, %YELLOW%%SKIPPED% skipped%RESET%  (total: %TOTAL%)
@@ -123,21 +121,15 @@ if %FAILED% gtr 0 (
     echo %BOLD%%RED%Failure details:%RESET%
     for %%N in (!FAIL_LIST!) do (
         echo.
-        echo   %RED%%%%~nN%%RESET%
+        echo   %RED%%%%~nxN%%RESET%
+        set "EFILE=%%~dNpN.expected"
         echo   Expected:
-        for /f "delims=" %%L in ('findstr /N "^" "%%~dNpN.expected"') do (
-            set "LINE=%%L"
-            set "LINE=!LINE:*:=!"
-            set "LINE=!LINE:%CR%=!"
-            echo     !LINE!
+        for /f "delims=" %%L in ('findstr /N "^" "!EFILE!"') do (
+            set "L=%%L"
+            echo     !L:*:=!
         )
         echo   Actual:
-        "%JSLING%" "%%N" 2>&1 | find /v "" | findstr /N "^" | for /f "delims=" %%L in ('more') do (
-            set "LINE=%%L"
-            set "LINE=!LINE:*:=!"
-            set "LINE=!LINE:%CR%=!"
-            echo     !LINE!
-        )
+        "%JSLING%" "%%N" 2>&1
     )
     echo.
 )
@@ -169,36 +161,39 @@ if defined FILTER (
 REM Skip if .skip file exists
 if exist "%SKIP_FILE%" (
     set /p SKIP_REASON=<"%SKIP_FILE%"
-    echo   %YELLOW%SKIP%RESET%  %BASE_NAME%  %DIM%(!SKIP_REASON!)%RESET%
+    echo   %YELLOW%SKIP%RESET%  %BASE_NAME%  %DIM%[!SKIP_REASON!]%RESET%
     set /a SKIPPED+=1
     goto :eof
 )
 
 REM Skip if no .expected file
 if not exist "%EXPECTED_FILE%" (
-    echo   %YELLOW%SKIP%RESET%  %BASE_NAME%  %DIM%(no .expected file)%RESET%
+    echo   %YELLOW%SKIP%RESET%  %BASE_NAME%  %DIM%[no .expected file]%RESET%
     set /a SKIPPED+=1
     goto :eof
 )
 
-REM Run jsling and capture stdout+stderr
-"%JSLING%" "%JS_FILE%" 2>&1 | find /v "" > "%ACTUAL_FILE%"
+REM Run jsling and normalize CRLF to LF using PowerShell
+"%JSLING%" "%JS_FILE%" 2>&1 > "%ACT_FILE%.raw"
+powershell -NoProfile -Command "(Get-Content '%ACT_FILE%.raw') -join \"`n\" | Set-Content -NoNewline '%ACT_FILE%' -Encoding UTF8" 2>nul
+if exist "%ACT_FILE%.raw" del "%ACT_FILE%.raw" >nul 2>&1
+
+REM Normalize expected file too
+powershell -NoProfile -Command "(Get-Content '%EXPECTED_FILE%') -join \"`n\" | Set-Content -NoNewline '%EXP_FILE%' -Encoding UTF8" 2>nul
 
 REM --- Compare using arrays to handle ~ pattern lines ---
 set /a EXP_N=0
-for /f "delims=" %%L in ('findstr /N "^" "%EXPECTED_FILE%"') do (
+for /f "delims=" %%L in ('findstr /N "^" "%EXP_FILE%"') do (
     set "RAWLINE=%%L"
     set "STRIPPED=!RAWLINE:*:=!"
-    set "STRIPPED=!STRIPPED:%CR%=!"
     set /a EXP_N+=1
     set "EXP_LINE_!EXP_N!=!STRIPPED!"
 )
 
 set /a ACT_N=0
-for /f "delims=" %%L in ('findstr /N "^" "%ACTUAL_FILE%"') do (
+for /f "delims=" %%L in ('findstr /N "^" "%ACT_FILE%"') do (
     set "RAWLINE=%%L"
     set "STRIPPED=!RAWLINE:*:=!"
-    set "STRIPPED=!STRIPPED:%CR%=!"
     set /a ACT_N+=1
     set "ACT_LINE_!ACT_N!=!STRIPPED!"
 )
@@ -219,17 +214,16 @@ for /L %%i in (1,1,!EXP_N!) do (
         set "ELINE=!EXP_LINE_%%i!"
         set "ALINE=!ACT_LINE_%%i!"
         if "!ELINE:~0,1!"=="~" (
-            REM Pattern match: strip leading ~ and check substring containment
             set "PATTERN=!ELINE:~1!"
             echo !ALINE! | findstr /C:"!PATTERN!" >nul 2>&1
             if errorlevel 1 (
                 set "ALL_MATCH=false"
-                set "FIRST_DIFF=line %%i: pattern '!PATTERN!' not found in '!ALINE!'"
+                set "FIRST_DIFF=line %%i: pattern not matched"
             )
         ) else (
             if "!ALINE!" neq "!ELINE!" (
                 set "ALL_MATCH=false"
-                set "FIRST_DIFF=line %%i: expected '!ELINE!', got '!ALINE!'"
+                set "FIRST_DIFF=line %%i: expected [!ELINE!] got [!ALINE!]"
             )
         )
     )
@@ -244,7 +238,7 @@ if "!ALL_MATCH!"=="true" (
     echo   %GREEN%PASS%RESET%  %BASE_NAME%
     set /a PASSED+=1
 ) else (
-    echo   %RED%FAIL%RESET%  %BASE_NAME%  %DIM%(!FIRST_DIFF!)%RESET%
+    echo   %RED%FAIL%RESET%  %BASE_NAME%  %DIM%!FIRST_DIFF!%RESET%
     set /a FAILED+=1
     set "FAIL_LIST=!FAIL_LIST! "%JS_FILE%""
 )
