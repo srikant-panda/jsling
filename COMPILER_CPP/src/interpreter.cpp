@@ -773,8 +773,8 @@ JSValue Interpreter::callMethod(const JSValue& object, const std::string& method
     // String methods
     if (object.isString()) {
         const std::string& s = object.asString();
-        if (method == "toUpperCase") return JSValue::makeString([&] { std::string r = s; std::transform(r.begin(), r.end(), r.begin(), ::toupper); return r; }());
-        if (method == "toLowerCase") return JSValue::makeString([&] { std::string r = s; std::transform(r.begin(), r.end(), r.begin(), ::tolower); return r; }());
+        if (method == "toUpperCase") return JSValue::makeString([&] { std::string r = s; std::transform(r.begin(), r.end(), r.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); }); return r; }());
+        if (method == "toLowerCase") return JSValue::makeString([&] { std::string r = s; std::transform(r.begin(), r.end(), r.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); }); return r; }());
         if (method == "trim") return JSValue::makeString([&] { size_t start = s.find_first_not_of(" \t\n\r"); size_t end = s.find_last_not_of(" \t\n\r"); return start == std::string::npos ? "" : s.substr(start, end - start + 1); }());
         if (method == "includes") return JSValue::makeBool(s.find(args.empty() ? "" : args[0].asString()) != std::string::npos);
         if (method == "indexOf") { auto pos = s.find(args.empty() ? "" : args[0].asString()); return JSValue::makeNumber(pos == std::string::npos ? -1 : static_cast<double>(pos)); }

@@ -24,6 +24,7 @@ target_include_directories(jsling PRIVATE include)
 
 if(MSVC)
     target_compile_options(jsling PRIVATE /W4)
+    target_compile_definitions(jsling PRIVATE _CRT_SECURE_NO_WARNINGS)
 else()
     target_compile_options(jsling PRIVATE -Wall -Wextra -Wpedantic)
 endif()

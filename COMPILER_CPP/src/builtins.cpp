@@ -392,7 +392,7 @@ void setupBuiltins(std::shared_ptr<Environment> env) {
             auto it = obj->properties.find("__timestamp__");
             if (it == obj->properties.end()) return JSValue::makeNumber(std::nan(""));
             long long totalMs = static_cast<long long>(it->second.asNumber());
-            return JSValue::makeNumber(totalMs % 1000);
+            return JSValue::makeNumber(static_cast<double>(totalMs % 1000));
         }}));
     dateMethods->keys.push_back("getMilliseconds"); dateMethods->properties["getMilliseconds"] = getMsFn;
     // getTime
