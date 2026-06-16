@@ -124,7 +124,7 @@ if %FAILED% gtr 0 (
         echo   %RED%%%%~nxN%%RESET%
         set "EFILE=%%~dNpN.expected"
         echo   Expected:
-        for /f "delims=" %%L in ('findstr /N "^" "!EFILE!"') do (
+        for /f "usebackq delims=" %%L in (`findstr /N "^" "!EFILE!"`) do (
             set "L=%%L"
             echo     !L:*:=!
         )
@@ -183,7 +183,7 @@ powershell -NoProfile -Command "(Get-Content '%EXPECTED_FILE%') -join \"`n\" | S
 
 REM --- Compare using arrays to handle ~ pattern lines ---
 set /a EXP_N=0
-for /f "delims=" %%L in ('findstr /N "^" "%EXP_FILE%"') do (
+for /f "usebackq delims=" %%L in (`findstr /N "^" "%EXP_FILE%"`) do (
     set "RAWLINE=%%L"
     set "STRIPPED=!RAWLINE:*:=!"
     set /a EXP_N+=1
@@ -191,7 +191,7 @@ for /f "delims=" %%L in ('findstr /N "^" "%EXP_FILE%"') do (
 )
 
 set /a ACT_N=0
-for /f "delims=" %%L in ('findstr /N "^" "%ACT_FILE%"') do (
+for /f "usebackq delims=" %%L in (`findstr /N "^" "%ACT_FILE%"`) do (
     set "RAWLINE=%%L"
     set "STRIPPED=!RAWLINE:*:=!"
     set /a ACT_N+=1

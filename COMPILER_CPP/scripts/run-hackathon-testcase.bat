@@ -102,16 +102,13 @@ echo Binary:  %BOLD%%BINARY%%RESET%
 echo Tests:   %BOLD%%TEST_DIR%%RESET%
 echo.
 
-REM --- Temp files for comparison ---
-set "ACTUAL_TMP=%TEMP%\jsling_hack_actual_%RANDOM%.tmp"
-set "EXPECTED_TMP=%TEMP%\jsling_hack_expected_%RANDOM%.tmp"
+REM --- Temp files ---
+set "LINE_TMP=%TEMP%\jsling_lines_%RANDOM%.tmp"
+set "ACT_TMP=%TEMP%\jsling_act_%RANDOM%.tmp"
+set "EXP_TMP=%TEMP%\jsling_exp_%RANDOM%.tmp"
 
 REM --- Run each test via subroutine ---
 for /L %%i in (1,1,5) do call :run_hack_test %%i
-
-REM --- Cleanup temp files ---
-if exist "%ACTUAL_TMP%" del "%ACTUAL_TMP%" >nul 2>&1
-if exist "%EXPECTED_TMP%" del "%EXPECTED_TMP%" >nul 2>&1
 
 REM --- Summary ---
 echo %BOLD%%CYAN%======================================================================%RESET%
@@ -134,7 +131,29 @@ if %FAIL% equ 0 (
     echo %RED%%BOLD%%FAIL% test case^(s^) failed. Score: %SCORE%/100%RESET%
 )
 echo.
+
+REM Cleanup
+for %%T in ("%LINE_TMP%" "%ACT_TMP%" "%EXP_TMP%") do if exist %%T del %%T >nul 2>&1
+
 exit /b %FAIL%
+
+REM =============================================================================
+REM  Subroutine: display a file with numbered lines (preserves empty lines)
+REM  %1 = input file path
+REM  Writes numbered output to LINE_TMP, then reads it safely
+REM =============================================================================
+:show_file
+findstr /N "^" "%~1" > "%LINE_TMP%" 2>nul
+for /f "usebackq delims=" %%L in ("%LINE_TMP%") do (
+    set "LN=%%L"
+    set "CONTENT=!LN:*:=!"
+    if defined CONTENT (
+        echo     !CONTENT!
+    ) else (
+        echo.
+    )
+)
+goto :eof
 
 REM =============================================================================
 REM  Subroutine: run a single hackathon test
@@ -158,20 +177,14 @@ if not exist "!JS_FILE!" (
 
 echo.
 echo   %CYAN%Source Code:%RESET%
-for /f "delims=" %%L in ('findstr /N "^" "!JS_FILE!"') do (
-    set "SRCLINE=%%L"
-    echo     !SRCLINE:*:=!
-)
+call :show_file "!JS_FILE!"
 echo.
 
 REM Run jsling and capture output
-"%BINARY%" "!JS_FILE!" > "!ACTUAL_TMP!" 2>&1
+"%BINARY%" "!JS_FILE!" > "%ACT_TMP%" 2>&1
 
 echo   %GREEN%Actual Output:%RESET%
-for /f "delims=" %%L in ('findstr /N "^" "!ACTUAL_TMP!"') do (
-    set "OUTLINE=%%L"
-    echo     !OUTLINE:*:=!
-)
+call :show_file "%ACT_TMP%"
 echo.
 
 if not exist "!EXP_FILE!" (
@@ -181,17 +194,14 @@ if not exist "!EXP_FILE!" (
 )
 
 echo   %YELLOW%Expected Output:%RESET%
-for /f "delims=" %%L in ('findstr /N "^" "!EXP_FILE!"') do (
-    set "EXPLINE=%%L"
-    echo     !EXPLINE:*:=!
-)
+call :show_file "!EXP_FILE!"
 echo.
 
-REM Compare: strip blank lines from both then use fc
-findstr /R /V "^$" "!ACTUAL_TMP!" > "!ACTUAL_TMP!.clean" 2>nul
-findstr /R /V "^$" "!EXP_FILE!" > "!EXPECTED_TMP!.clean" 2>nul
+REM Compare: normalize CRLF to LF and strip blank lines, then fc /B
+powershell -NoProfile -Command "(Get-Content '%ACT_TMP%') | Where-Object {$_.Trim() -ne ''} | Set-Content '%ACT_TMP%.clean'" 2>nul
+powershell -NoProfile -Command "(Get-Content '!EXP_FILE!') | Where-Object {$_.Trim() -ne ''} | Set-Content '%EXP_TMP%.clean'" 2>nul
 
-fc /B "!ACTUAL_TMP!.clean" "!EXPECTED_TMP!.clean" >nul 2>&1
+fc /B "%ACT_TMP%.clean" "%EXP_TMP%.clean" >nul 2>&1
 if !ERRORLEVEL! equ 0 (
     echo   %GREEN%%BOLD%PASS  +20 pts%RESET%
     set /a PASS+=1
@@ -201,8 +211,8 @@ if !ERRORLEVEL! equ 0 (
     set /a FAIL+=1
 )
 
-if exist "!ACTUAL_TMP!.clean" del "!ACTUAL_TMP!.clean" >nul 2>&1
-if exist "!EXPECTED_TMP!.clean" del "!EXPECTED_TMP!.clean" >nul 2>&1
+if exist "%ACT_TMP%.clean" del "%ACT_TMP%.clean" >nul 2>&1
+if exist "%EXP_TMP%.clean" del "%EXP_TMP%.clean" >nul 2>&1
 echo.
 goto :eof
 
@@ -224,16 +234,15 @@ if not exist "!EXP_FILE!" (
     goto :eof
 )
 
-"%BINARY%" "!JS_FILE!" > "!ACTUAL_TMP!" 2>&1
-findstr /R /V "^$" "!ACTUAL_TMP!" > "!ACTUAL_TMP!.clean" 2>nul
-findstr /R /V "^$" "!EXP_FILE!" > "!EXPECTED_TMP!.clean" 2>nul
-fc /B "!ACTUAL_TMP!.clean" "!EXPECTED_TMP!.clean" >nul 2>&1
+"%BINARY%" "!JS_FILE!" > "%ACT_TMP%" 2>&1
+powershell -NoProfile -Command "(Get-Content '%ACT_TMP%') | Where-Object {$_.Trim() -ne ''} | Set-Content '%ACT_TMP%.clean'" 2>nul
+powershell -NoProfile -Command "(Get-Content '!EXP_FILE!') | Where-Object {$_.Trim() -ne ''} | Set-Content '%EXP_TMP%.clean'" 2>nul
+fc /B "%ACT_TMP%.clean" "%EXP_TMP%.clean" >nul 2>&1
 if !ERRORLEVEL! equ 0 (
-    echo   %GREEN%PASS%RESET% !NAME%IDX%!                         +20
+    echo   %GREEN%PASS%RESET% !NAME%IDX%!                                     +20
 ) else (
-    echo   %RED%FAIL%RESET% !NAME%IDX%!                           0
+    echo   %RED%FAIL%RESET% !NAME%IDX%!                                      0
 )
-if exist "!ACTUAL_TMP!" del "!ACTUAL_TMP!" >nul 2>&1
-if exist "!ACTUAL_TMP!.clean" del "!ACTUAL_TMP!.clean" >nul 2>&1
-if exist "!EXPECTED_TMP!.clean" del "!EXPECTED_TMP!.clean" >nul 2>&1
+if exist "%ACT_TMP%.clean" del "%ACT_TMP%.clean" >nul 2>&1
+if exist "%EXP_TMP%.clean" del "%EXP_TMP%.clean" >nul 2>&1
 goto :eof
