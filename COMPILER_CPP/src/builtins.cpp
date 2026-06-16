@@ -3,7 +3,13 @@
 #include "jsling/errors.hpp"
 #include <iostream>
 #include <cmath>
+#ifdef _WIN32
+#include <io.h>
+#define isatty _isatty
+#define fileno _fileno
+#else
 #include <unistd.h>
+#endif
 #include <cstdlib>
 #include <chrono>
 #include <ctime>

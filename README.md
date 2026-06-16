@@ -34,6 +34,10 @@ bash scripts/build.sh
 ### 🪟 Windows
 
 Open **Developer Command Prompt for VS 2022+**, then run:
+**Prerequisites:**
+- Visual Studio Build Tools (with "Desktop development with C++")
+- CMake (https://cmake.org/download/)
+- Inno Setup 6 (https://jrsoftware.org/isdl.php)
 
 ```cmd
 git clone https://github.com/srikant-panda/jsling.git
