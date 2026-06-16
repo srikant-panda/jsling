@@ -70,6 +70,7 @@ if not exist "%JSLING%" (
     )
     if !ERRORLEVEL! neq 0 (
         echo %RED%[error]%RESET% CMake configure failed. Install Visual Studio Build Tools or MinGW-w64.
+        pause
         exit /b 1
     )
 
@@ -81,6 +82,7 @@ if not exist "%JSLING%" (
 
     if not exist "%JSLING%" (
         echo %RED%[error]%RESET% Build failed. Make sure a C++ compiler is in your PATH.
+        pause
         exit /b 1
     )
     echo %GREEN%[ok]%RESET% Build complete
@@ -135,6 +137,7 @@ if %FAILED% gtr 0 (
 )
 
 echo.
+pause
 if %FAILED% equ 0 (exit /b 0) else (exit /b 1)
 
 REM =============================================================================

@@ -78,6 +78,7 @@ if not exist "%BINARY%" (
     )
     if !ERRORLEVEL! neq 0 (
         echo %RED%[error]%RESET% CMake configure failed.
+        pause
         exit /b 1
     )
     if defined AUTO_MAKE (
@@ -87,6 +88,7 @@ if not exist "%BINARY%" (
     )
     if not exist "%BINARY%" (
         echo %RED%[error]%RESET% Build failed.
+        pause
         exit /b 1
     )
     echo %GREEN%[ok]%RESET% Build complete
@@ -135,6 +137,7 @@ echo.
 REM Cleanup
 for %%T in ("%LINE_TMP%" "%ACT_TMP%" "%EXP_TMP%") do if exist %%T del %%T >nul 2>&1
 
+pause
 exit /b %FAIL%
 
 REM =============================================================================

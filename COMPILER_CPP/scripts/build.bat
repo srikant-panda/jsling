@@ -70,9 +70,11 @@ if defined MAKE_CMD (
 
 if %ERRORLEVEL% neq 0 (
     echo [error] Build failed.
+    pause
     exit /b 1
 )
 
 echo.
 echo [done] Build complete: build\jsling.exe
+pause
 exit /b 0
