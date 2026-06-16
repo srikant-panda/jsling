@@ -123,7 +123,7 @@ echo -e "${BOLD}${CYAN}╚══════════════════
 echo ""
 
 if [ $FAIL -eq 0 ]; then
-    echo -e "${GREEN}${BOLD}All test cases passed! 🎉${NC}"
+    echo -e "${GREEN}${BOLD}All test cases passed!${NC}"
 else
     echo -e "${RED}${BOLD}${FAIL} test case(s) failed.${NC}"
 fi
