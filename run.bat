@@ -11,27 +11,27 @@ set "ROOT=%~dp0"
 REM Look for jsling.exe: prefer bin\ (shipped), then build\ (dev)
 if exist "%ROOT%bin\jsling.exe" (
     set "BINARY=%ROOT%bin\jsling.exe"
-) else if exist "%ROOT%COMPILER_CPP\build\jsling.exe" (
+    goto :found
+)
+if exist "%ROOT%COMPILER_CPP\build\jsling.exe" (
     set "BINARY=%ROOT%COMPILER_CPP\build\jsling.exe"
-) else (
-    set "BINARY="
+    goto :found
 )
 
+echo.
+echo  [!] jsling.exe not found.
+echo.
+echo      Expected locations:
+echo        bin\jsling.exe                   (pre-built, shipped with repo)
+echo        COMPILER_CPP\build\jsling.exe    (built from source)
+echo.
+echo      To build from source: scripts\build.bat  (requires MinGW + GCC 7+)
+echo.
+pause
+exit /b 1
+
+:found
 title jsling - JavaScript Runtime
-
-if not defined BINARY (
-    echo.
-    echo  [!] jsling.exe not found.
-    echo.
-    echo      Expected locations:
-    echo        bin\jsling.exe                   ^(pre-built, shipped with repo^)
-    echo        COMPILER_CPP\build\jsling.exe    ^(built from source^)
-    echo.
-    echo      To build from source: scripts\build.bat  ^(requires MinGW + GCC 7+^)
-    echo.
-    pause
-    exit /b 1
-)
 
 echo.
 echo  ========================================
@@ -48,49 +48,62 @@ echo.
 
 set /p CHOICE="  Enter choice (1-5): "
 
-if "%CHOICE%"=="1" (
-    echo.
-    echo  --- Running demo.js ---
-    echo.
-    if exist "%ROOT%demo.js" (
-        "%BINARY%" "%ROOT%demo.js"
-    ) else (
-        echo  demo.js not found. Creating one...
-        echo.
-        (
-            echo let name = "Hackathon";
-            echo console.log("Hello, " + name + "!");
-            echo let double = x =^> x * 2;
-            echo console.log("double(21) = " + double(21^)^);
-            echo let arr = [1, 2, 3, 4, 5];
-            echo console.log("Reversed: " + [...arr].reverse(^).join(", "^)^);
-        ) > "%ROOT%demo.js"
-        "%BINARY%" "%ROOT%demo.js"
-    )
-    echo.
-    pause
-) else if "%CHOICE%"=="2" (
-    echo.
-    call "%ROOT%COMPILER_CPP\scripts\run-hackathon-testcase.bat"
-    echo.
-    pause
-) else if "%CHOICE%"=="3" (
-    echo.
-    call "%ROOT%COMPILER_CPP\scripts\run-tests.bat"
-    echo.
-    pause
-) else if "%CHOICE%"=="4" (
-    echo.
-    "%BINARY%"
-) else if "%CHOICE%"=="5" (
-    echo.
-    set /p EXPR="  Expression: "
-    echo.
-    "%BINARY%" -e "!EXPR!"
-    echo.
-    pause
-) else (
-    echo.
-    echo  Invalid choice.
-    pause
+if "%CHOICE%"=="1" goto :demo
+if "%CHOICE%"=="2" goto :hackathon
+if "%CHOICE%"=="3" goto :fulltest
+if "%CHOICE%"=="4" goto :repl
+if "%CHOICE%"=="5" goto :eval
+goto :invalid
+
+:demo
+echo.
+echo  --- Running demo.js ---
+echo.
+if not exist "%ROOT%demo.js" (
+    echo let name = "Hackathon";> "%ROOT%demo.js"
+    echo console.log("Hello, " + name + "!");>> "%ROOT%demo.js"
+    echo let double = x =^> x * 2;>> "%ROOT%demo.js"
+    echo console.log("double(21) = " + double(21));>> "%ROOT%demo.js"
+    echo let arr = [1, 2, 3, 4, 5];>> "%ROOT%demo.js"
+    echo console.log("Reversed: " + [...arr].reverse().join(", "));>> "%ROOT%demo.js"
 )
+"%BINARY%" "%ROOT%demo.js"
+echo.
+pause
+goto :done
+
+:hackathon
+echo.
+call "%ROOT%COMPILER_CPP\scripts\run-hackathon-testcase.bat"
+echo.
+pause
+goto :done
+
+:fulltest
+echo.
+call "%ROOT%COMPILER_CPP\scripts\run-tests.bat"
+echo.
+pause
+goto :done
+
+:repl
+echo.
+"%BINARY%"
+goto :done
+
+:eval
+echo.
+set /p EXPR="  Expression: "
+echo.
+"%BINARY%" -e "!EXPR!"
+echo.
+pause
+goto :done
+
+:invalid
+echo.
+echo  Invalid choice.
+pause
+goto :done
+
+:done
