@@ -1,6 +1,6 @@
 @echo off
 REM =============================================================================
-REM jsling automated test runner for MinGW / Windows (not Visual Studio)
+REM jsling automated test runner for Windows
 REM Usage: scripts\run-tests.bat [--filter <pattern>]
 REM =============================================================================
 setlocal enabledelayedexpansion
@@ -8,14 +8,31 @@ setlocal enabledelayedexpansion
 REM Capture CR character for CRLF stripping
 for /f %%a in ('copy /Z "%~f0" nul') do set "CR=%%a"
 
+REM --- ANSI colors (Windows 10+ Terminal) ---
+for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
+set "RED=%ESC%[0;31m"
+set "GREEN=%ESC%[0;32m"
+set "YELLOW=%ESC%[1;33m"
+set "CYAN=%ESC%[0;36m"
+set "BOLD=%ESC%[1m"
+set "DIM=%ESC%[2m"
+set "RESET=%ESC%[0m"
+
 set "SCRIPT_DIR=%~dp0"
-set "PROJECT_DIR=%SCRIPT_DIR%.."
+pushd "%SCRIPT_DIR%.."
+set "PROJECT_DIR=%CD%"
+popd
 set "BUILD_DIR=%PROJECT_DIR%\build"
 set "TEST_DIR=%PROJECT_DIR%\tests"
 
+REM Resolve repo root for bin\ lookup
+pushd "%PROJECT_DIR%\.."
+set "REPO_ROOT=%CD%"
+popd
+
 REM Look for binary: prefer bin\ (shipped), then build\ (dev)
-if exist "%PROJECT_DIR%\..\bin\jsling.exe" (
-    set "JSLING=%PROJECT_DIR%\..\bin\jsling.exe"
+if exist "%REPO_ROOT%\bin\jsling.exe" (
+    set "JSLING=%REPO_ROOT%\bin\jsling.exe"
 ) else (
     set "JSLING=%BUILD_DIR%\jsling.exe"
 )
@@ -32,10 +49,9 @@ goto :parse_args
 
 REM --- Build if needed (auto-detect toolchain) ---
 if not exist "%JSLING%" (
-    echo [info] Building jsling...
+    echo %CYAN%[info]%RESET% Building jsling...
     if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
 
-    REM Detect available make tool
     set "AUTO_GEN="
     set "AUTO_MAKE="
     where mingw32-make >nul 2>&1
@@ -56,7 +72,7 @@ if not exist "%JSLING%" (
         cmake -DCMAKE_BUILD_TYPE=Release -S "%PROJECT_DIR%" -B "%BUILD_DIR%" >nul 2>&1
     )
     if !ERRORLEVEL! neq 0 (
-        echo [error] CMake configure failed. Make sure gcc/g++ is in your PATH.
+        echo %RED%[error]%RESET% CMake configure failed. Install Visual Studio Build Tools or MinGW-w64.
         exit /b 1
     )
 
@@ -67,9 +83,10 @@ if not exist "%JSLING%" (
     )
 
     if not exist "%JSLING%" (
-        echo [error] Build failed. Make sure a C++ compiler is in your PATH.
+        echo %RED%[error]%RESET% Build failed. Make sure a C++ compiler is in your PATH.
         exit /b 1
     )
+    echo %GREEN%[ok]%RESET% Build complete
 )
 
 REM --- Counters ---
@@ -77,13 +94,18 @@ set /a TOTAL=0
 set /a PASSED=0
 set /a FAILED=0
 set /a SKIPPED=0
+set "FAIL_LIST="
 
 REM --- Temp file ---
 set "ACTUAL_FILE=%TEMP%\jsling_actual_%RANDOM%.tmp"
 
 echo.
-echo jsling test suite
+echo %BOLD%jsling test suite%RESET%
 echo ==================
+echo.
+echo %DIM%Binary:  %JSLING%%RESET%
+echo %DIM%Tests:   %TEST_DIR%%RESET%
+if defined FILTER echo %DIM%Filter:  %FILTER%%RESET%
 echo.
 
 REM --- Run all .js test files ---
@@ -93,9 +115,34 @@ REM --- Summary ---
 if exist "%ACTUAL_FILE%" del "%ACTUAL_FILE%" >nul 2>&1
 
 echo.
-echo Results:  %PASSED% passed, %FAILED% failed, %SKIPPED% skipped  (total: %TOTAL%)
-echo.
+echo %BOLD%Results:%RESET%  %GREEN%%PASSED% passed%RESET%, %RED%%FAILED% failed%RESET%, %YELLOW%%SKIPPED% skipped%RESET%  (total: %TOTAL%)
 
+REM Show failure details
+if %FAILED% gtr 0 (
+    echo.
+    echo %BOLD%%RED%Failure details:%RESET%
+    for %%N in (!FAIL_LIST!) do (
+        echo.
+        echo   %RED%%%%~nN%%RESET%
+        echo   Expected:
+        for /f "delims=" %%L in ('findstr /N "^" "%%~dNpN.expected"') do (
+            set "LINE=%%L"
+            set "LINE=!LINE:*:=!"
+            set "LINE=!LINE:%CR%=!"
+            echo     !LINE!
+        )
+        echo   Actual:
+        "%JSLING%" "%%N" 2>&1 | find /v "" | findstr /N "^" | for /f "delims=" %%L in ('more') do (
+            set "LINE=%%L"
+            set "LINE=!LINE:*:=!"
+            set "LINE=!LINE:%CR%=!"
+            echo     !LINE!
+        )
+    )
+    echo.
+)
+
+echo.
 if %FAILED% equ 0 (exit /b 0) else (exit /b 1)
 
 REM =============================================================================
@@ -122,19 +169,19 @@ if defined FILTER (
 REM Skip if .skip file exists
 if exist "%SKIP_FILE%" (
     set /p SKIP_REASON=<"%SKIP_FILE%"
-    echo   SKIP  %BASE_NAME%  ^(!SKIP_REASON!^)
+    echo   %YELLOW%SKIP%RESET%  %BASE_NAME%  %DIM%(!SKIP_REASON!)%RESET%
     set /a SKIPPED+=1
     goto :eof
 )
 
 REM Skip if no .expected file
 if not exist "%EXPECTED_FILE%" (
-    echo   SKIP  %BASE_NAME%  (no .expected file)
+    echo   %YELLOW%SKIP%RESET%  %BASE_NAME%  %DIM%(no .expected file)%RESET%
     set /a SKIPPED+=1
     goto :eof
 )
 
-REM Run jsling and capture stdout+stderr (strip CR for CRLF normalization)
+REM Run jsling and capture stdout+stderr
 "%JSLING%" "%JS_FILE%" 2>&1 | find /v "" > "%ACTUAL_FILE%"
 
 REM --- Compare using arrays to handle ~ pattern lines ---
@@ -157,10 +204,12 @@ for /f "delims=" %%L in ('findstr /N "^" "%ACTUAL_FILE%"') do (
 )
 
 set "ALL_MATCH=true"
+set "FIRST_DIFF="
 
 REM Line count must match
 if !EXP_N! neq !ACT_N! (
     set "ALL_MATCH=false"
+    set "FIRST_DIFF=line count: expected !EXP_N!, got !ACT_N!"
     goto :compare_done
 )
 
@@ -173,31 +222,31 @@ for /L %%i in (1,1,!EXP_N!) do (
             REM Pattern match: strip leading ~ and check substring containment
             set "PATTERN=!ELINE:~1!"
             echo !ALINE! | findstr /C:"!PATTERN!" >nul 2>&1
-            if errorlevel 1 set "ALL_MATCH=false"
+            if errorlevel 1 (
+                set "ALL_MATCH=false"
+                set "FIRST_DIFF=line %%i: pattern '!PATTERN!' not found in '!ALINE!'"
+            )
         ) else (
-            if "!ALINE!" neq "!ELINE!" set "ALL_MATCH=false"
+            if "!ALINE!" neq "!ELINE!" (
+                set "ALL_MATCH=false"
+                set "FIRST_DIFF=line %%i: expected '!ELINE!', got '!ALINE!'"
+            )
         )
     )
 )
 :compare_done
 
-REM Clean up arrays to avoid leaking into next test
+REM Clean up arrays
 for /L %%i in (1,1,!EXP_N!) do set "EXP_LINE_%%i="
 for /L %%i in (1,1,!ACT_N!) do set "ACT_LINE_%%i="
 
 if "!ALL_MATCH!"=="true" (
-    echo   PASS  %BASE_NAME%
+    echo   %GREEN%PASS%RESET%  %BASE_NAME%
     set /a PASSED+=1
 ) else (
-    echo   FAIL  %BASE_NAME%
+    echo   %RED%FAIL%RESET%  %BASE_NAME%  %DIM%(!FIRST_DIFF!)%RESET%
     set /a FAILED+=1
-    echo.
-    echo   --- Expected ---
-    type "%EXPECTED_FILE%"
-    echo.
-    echo   --- Actual ---
-    type "%ACTUAL_FILE%"
-    echo.
+    set "FAIL_LIST=!FAIL_LIST! "%JS_FILE%""
 )
 
 goto :eof

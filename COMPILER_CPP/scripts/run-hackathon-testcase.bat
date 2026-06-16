@@ -9,13 +9,20 @@ REM ============================================================================
 setlocal enabledelayedexpansion
 
 set "SCRIPT_DIR=%~dp0"
-set "PROJECT_DIR=%SCRIPT_DIR%.."
+pushd "%SCRIPT_DIR%.."
+set "PROJECT_DIR=%CD%"
+popd
 set "BUILD_DIR=%PROJECT_DIR%\build"
 set "TEST_DIR=%PROJECT_DIR%\tests\hackathon_testcase"
 
+REM Resolve repo root for bin\ lookup
+pushd "%PROJECT_DIR%\.."
+set "REPO_ROOT=%CD%"
+popd
+
 REM Look for binary: prefer bin\ (shipped), then build\ (dev)
-if exist "%PROJECT_DIR%\..\bin\jsling.exe" (
-    set "BINARY=%PROJECT_DIR%\..\bin\jsling.exe"
+if exist "%REPO_ROOT%\bin\jsling.exe" (
+    set "BINARY=%REPO_ROOT%\bin\jsling.exe"
 ) else (
     set "BINARY=%BUILD_DIR%\jsling.exe"
 )
