@@ -107,11 +107,42 @@ if ($Uninstall) {
     exit 0
 }
 
+# --- Prompt confirmation for installation ---
+$confirm = Read-Host "Do you want to proceed with installing jsling on Windows? [Y/n]"
+if ($confirm -and $confirm.Trim().ToLower() -eq "n") {
+    Write-Info "Installation aborted by user."
+    exit 0
+}
+
 if (-not (Test-Path (Join-Path $projectDir "CMakeLists.txt"))) {
     Fail "CMakeLists.txt not found in $projectDir"
 }
 
-Require-Command "cmake" "Install with: winget install Kitware.CMake"
+# --- Helper to install dependencies using winget ---
+function Install-Dependency($Name, $WingetId) {
+    $choice = Read-Host "Missing dependency: $Name. Would you like to install it automatically using winget? [y/N]"
+    if ($choice -and $choice.Trim().ToLower() -eq "y") {
+        if (-not (Get-Command "winget" -ErrorAction SilentlyContinue)) {
+            Fail "winget is not available on this system. Please install $Name manually."
+        }
+        Write-Info "Installing $Name via winget..."
+        Start-Process -FilePath "winget" -ArgumentList "install", $WingetId, "--silent", "--accept-source-agreements", "--accept-package-agreements" -NoNewWindow -Wait
+        
+        # Refresh env Path to pick up new installation
+        $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+        if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+            Fail "Failed to install $Name automatically. Please install it manually and restart the console."
+        }
+        Write-Done "$Name installed successfully."
+    } else {
+        Fail "Cannot proceed without $Name. Please install it manually."
+    }
+}
+
+# Check and install cmake
+if (-not (Get-Command "cmake" -ErrorAction SilentlyContinue)) {
+    Install-Dependency "cmake" "Kitware.CMake"
+}
 
 Write-Info "Source directory: $projectDir"
 Write-Info "Install prefix: $Prefix"

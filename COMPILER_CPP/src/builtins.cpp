@@ -3,6 +3,7 @@
 #include "jsling/errors.hpp"
 #include <iostream>
 #include <cmath>
+#include <unistd.h>
 #include <cstdlib>
 #include <chrono>
 #include <ctime>
@@ -13,16 +14,17 @@
 namespace jsling {
 
 void setupBuiltins(std::shared_ptr<Environment> env) {
-    // console.log
+    // console.log - colored Node.js-like output
     auto console = std::make_shared<JSObject>();
     console->keys.push_back("log");
     console->properties["log"] = JSValue::makeNativeFunction(
         std::make_shared<JSNativeFunction>(JSNativeFunction{
             "log",
             [](const std::vector<JSValue>& args) -> JSValue {
+                bool color = isatty(fileno(stdout)) != 0;
                 for (size_t i = 0; i < args.size(); ++i) {
                     if (i > 0) std::cout << " ";
-                    std::cout << toDisplayString(args[i]);
+                    std::cout << (color ? colorDisplayString(args[i]) : toDisplayString(args[i]));
                 }
                 std::cout << "\n";
                 return JSValue::makeUndefined();
@@ -34,9 +36,12 @@ void setupBuiltins(std::shared_ptr<Environment> env) {
         std::make_shared<JSNativeFunction>(JSNativeFunction{
             "warn",
             [](const std::vector<JSValue>& args) -> JSValue {
+                bool color = isatty(fileno(stderr)) != 0;
                 for (size_t i = 0; i < args.size(); ++i) {
                     if (i > 0) std::cerr << " ";
-                    std::cerr << toDisplayString(args[i]);
+                    if (color) std::cerr << "\033[33m";
+                    std::cerr << (color ? colorDisplayString(args[i]) : toDisplayString(args[i]));
+                    if (color) std::cerr << "\033[0m";
                 }
                 std::cerr << "\n";
                 return JSValue::makeUndefined();
@@ -48,9 +53,12 @@ void setupBuiltins(std::shared_ptr<Environment> env) {
         std::make_shared<JSNativeFunction>(JSNativeFunction{
             "error",
             [](const std::vector<JSValue>& args) -> JSValue {
+                bool color = isatty(fileno(stderr)) != 0;
                 for (size_t i = 0; i < args.size(); ++i) {
                     if (i > 0) std::cerr << " ";
-                    std::cerr << toDisplayString(args[i]);
+                    if (color) std::cerr << "\033[31m";
+                    std::cerr << (color ? colorDisplayString(args[i]) : toDisplayString(args[i]));
+                    if (color) std::cerr << "\033[0m";
                 }
                 std::cerr << "\n";
                 return JSValue::makeUndefined();

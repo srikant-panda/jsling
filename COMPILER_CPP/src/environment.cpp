@@ -46,4 +46,14 @@ bool Environment::has(const std::string& name) const {
     return false;
 }
 
+std::vector<std::string> Environment::visibleNames() const {
+    std::vector<std::string> names;
+    for (const auto& [k, v] : vars_) names.push_back(k);
+    if (parent_) {
+        auto parentNames = parent_->visibleNames();
+        names.insert(names.end(), parentNames.begin(), parentNames.end());
+    }
+    return names;
+}
+
 } // namespace jsling

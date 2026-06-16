@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <chrono>
 #include <ctime>
+#include <set>
 
 namespace jsling {
 
@@ -19,9 +20,19 @@ void Interpreter::setupGlobals() {
 }
 
 void Interpreter::interpret(const Program& program) {
+    hoistVars(program.body, globalEnv_);
     for (const auto& stmt : program.body) {
         eval(*stmt, globalEnv_);
     }
+}
+
+JSValue Interpreter::interpretAndReturn(const Program& program) {
+    hoistVars(program.body, globalEnv_);
+    JSValue result = JSValue::makeUndefined();
+    for (const auto& stmt : program.body) {
+        result = eval(*stmt, globalEnv_);
+    }
+    return result;
 }
 
 static std::vector<JSValue> evalArgumentList(const std::vector<std::unique_ptr<ASTNode>>& argNodes,
@@ -57,7 +68,12 @@ static void bindFunctionArgs(const FunctionDecl& decl,
         if (value.isUndefined() && i < decl.defaults.size() && decl.defaults[i]) {
             value = interp.eval(*decl.defaults[i], fnEnv);
         }
-        fnEnv->define(decl.params[i], value);
+        // Check if this param has a destructuring pattern
+        if (i < decl.paramPatterns.size() && decl.paramPatterns[i]) {
+            interp.bindPattern(decl.paramPatterns[i].get(), value, fnEnv);
+        } else {
+            fnEnv->define(decl.params[i], value);
+        }
     }
     if (decl.hasRest) {
         auto rest = std::make_shared<std::vector<JSValue>>();
@@ -105,6 +121,7 @@ JSValue Interpreter::eval(const ASTNode& node, std::shared_ptr<Environment> env)
 // ==================== STATEMENT EVALUATION ====================
 
 JSValue Interpreter::evalProgram(const Program& node, std::shared_ptr<Environment> env) {
+    hoistVars(node.body, env);
     JSValue result = JSValue::makeUndefined();
     for (const auto& stmt : node.body) {
         result = eval(*stmt, env);
@@ -130,7 +147,11 @@ JSValue Interpreter::evalVarDecl(const VarDecl& node, std::shared_ptr<Environmen
     if (node.kind == "var") {
         targetEnv = env->getFunctionOrGlobalEnv();
     }
-    targetEnv->define(node.name, value);
+    if (node.pattern) {
+        bindPattern(node.pattern.get(), value, targetEnv);
+    } else {
+        targetEnv->define(node.name, value);
+    }
     return value;
 }
 
@@ -138,23 +159,42 @@ JSValue Interpreter::evalFunctionDecl(const FunctionDecl& node, std::shared_ptr<
     auto fn = std::make_shared<JSFunction>();
     fn->name = node.name;
     fn->params = node.params;
-    // Store body as raw pointer - we'll handle this in callFunction
     fn->closure = env;
-    // We need to store the body AST node - use a shared_ptr to a copy wrapper
-    // For simplicity, store the block body in a shared way
-    auto bodyNode = std::make_shared<BlockStmt>();
-    // Body stored via native closure wrapper
-    // Alternative: store the FunctionDecl node itself
-    fn->body = nullptr; // We'll use a different approach
-    
-    // Store function in environment if it has a name
+    fn->body = nullptr;
+
+    auto declPtr = &node;
+    auto closureEnv = env;
+
+    // Named function expression: bind name inside function scope only
+    if (node.isExpression && !node.name.empty()) {
+        auto nameEnv = std::make_shared<Environment>(closureEnv);
+        auto selfRef = std::make_shared<JSValue*>(nullptr);
+        auto nativeFn = JSValue::makeNativeFunction(
+            std::make_shared<JSNativeFunction>(JSNativeFunction{
+                node.name,
+                [declPtr, closureEnv, nameEnv, selfRef, this](const std::vector<JSValue>& args) -> JSValue {
+                    auto fnEnv = std::make_shared<Environment>(nameEnv);
+                    fnEnv->isFunctionOrGlobal = true;
+                    bindFunctionArgs(*declPtr, fnEnv, args, *this);
+                    hoistVars(declPtr->body->body, fnEnv);
+                    try {
+                        for (const auto& stmt : declPtr->body->body) {
+                            eval(*stmt, fnEnv);
+                        }
+                    } catch (const ReturnSignal& ret) {
+                        return ret.value;
+                    }
+                    return JSValue::makeUndefined();
+                }
+            })
+        );
+        *selfRef = new JSValue(nativeFn);
+        nameEnv->define(node.name, **selfRef);
+        return **selfRef;
+    }
+
+    // Named function declaration: define in outer env
     if (!node.name.empty()) {
-        // Create a special wrapper that holds the AST reference
-        auto fnVal = JSValue::makeFunction(fn);
-        // Store the actual function declaration node pointer for later use
-        // We'll handle this by creating a native wrapper
-        auto declPtr = &node;
-        auto closureEnv = env;
         env->define(node.name, JSValue::makeNativeFunction(
             std::make_shared<JSNativeFunction>(JSNativeFunction{
                 node.name,
@@ -162,6 +202,7 @@ JSValue Interpreter::evalFunctionDecl(const FunctionDecl& node, std::shared_ptr<
                     auto fnEnv = std::make_shared<Environment>(closureEnv);
                     fnEnv->isFunctionOrGlobal = true;
                     bindFunctionArgs(*declPtr, fnEnv, args, *this);
+                    hoistVars(declPtr->body->body, fnEnv);
                     try {
                         for (const auto& stmt : declPtr->body->body) {
                             eval(*stmt, fnEnv);
@@ -175,9 +216,8 @@ JSValue Interpreter::evalFunctionDecl(const FunctionDecl& node, std::shared_ptr<
         ));
         return JSValue::makeUndefined();
     }
-    // Anonymous function - return it
-    auto declPtr = &node;
-    auto closureEnv = env;
+
+    // Anonymous function expression - return it
     return JSValue::makeNativeFunction(
         std::make_shared<JSNativeFunction>(JSNativeFunction{
             "",
@@ -185,6 +225,7 @@ JSValue Interpreter::evalFunctionDecl(const FunctionDecl& node, std::shared_ptr<
                 auto fnEnv = std::make_shared<Environment>(closureEnv);
                 fnEnv->isFunctionOrGlobal = true;
                 bindFunctionArgs(*declPtr, fnEnv, args, *this);
+                hoistVars(declPtr->body->body, fnEnv);
                 try {
                     for (const auto& stmt : declPtr->body->body) {
                         eval(*stmt, fnEnv);
@@ -426,6 +467,12 @@ JSValue Interpreter::evalAssign(const AssignExpr& node, std::shared_ptr<Environm
         }
         return value;
     }
+    // Destructuring assignment: [a, b] = ... or {a, b} = ...
+    if (node.op == "=" && (dynamic_cast<const ArrayLiteral*>(node.target.get()) ||
+                            dynamic_cast<const ObjectLiteral*>(node.target.get()))) {
+        assignFromPattern(node.target.get(), value, env);
+        return value;
+    }
     throw TypeError("Invalid left-hand side in assignment");
 }
 
@@ -542,7 +589,10 @@ JSValue Interpreter::evalObject(const ObjectLiteral& node, std::shared_ptr<Envir
             continue;
         }
         std::string key;
-        if (auto* id = dynamic_cast<const Identifier*>(prop.key.get())) {
+        if (prop.computed) {
+            JSValue keyValue = eval(*prop.key, env);
+            key = toString(keyValue);
+        } else if (auto* id = dynamic_cast<const Identifier*>(prop.key.get())) {
             key = id->name;
         } else if (auto* lit = dynamic_cast<const Literal*>(prop.key.get())) {
             key = lit->stringValue;
@@ -680,6 +730,40 @@ JSValue Interpreter::getProperty(const JSValue& object, const std::string& prop)
             if (idx < object.asString().size()) return JSValue::makeString(std::string(1, object.asString()[idx]));
             return JSValue::makeUndefined();
         } catch (...) {}
+    }
+    // Static methods on Number
+    if (object.isNativeFunction() && object.asNativeFunction()->name == "Number") {
+        if (prop == "isNaN") {
+            return JSValue::makeNativeFunction(std::make_shared<JSNativeFunction>(JSNativeFunction{
+                "isNaN",
+                [](const std::vector<JSValue>& args) -> JSValue {
+                    if (args.empty()) return JSValue::makeBool(false);
+                    return JSValue::makeBool(args[0].isNumber() && std::isnan(args[0].asNumber()));
+                }
+            }));
+        }
+        if (prop == "isInteger") {
+            return JSValue::makeNativeFunction(std::make_shared<JSNativeFunction>(JSNativeFunction{
+                "isInteger",
+                [](const std::vector<JSValue>& args) -> JSValue {
+                    if (args.empty() || !args[0].isNumber()) return JSValue::makeBool(false);
+                    double n = args[0].asNumber();
+                    return JSValue::makeBool(std::isfinite(n) && std::floor(n) == n);
+                }
+            }));
+        }
+        if (prop == "isFinite") {
+            return JSValue::makeNativeFunction(std::make_shared<JSNativeFunction>(JSNativeFunction{
+                "isFinite",
+                [](const std::vector<JSValue>& args) -> JSValue {
+                    if (args.empty() || !args[0].isNumber()) return JSValue::makeBool(false);
+                    return JSValue::makeBool(std::isfinite(args[0].asNumber()));
+                }
+            }));
+        }
+        if (prop == "MAX_SAFE_INTEGER") return JSValue::makeNumber(9007199254740991.0);
+        if (prop == "MIN_SAFE_INTEGER") return JSValue::makeNumber(-9007199254740991.0);
+        if (prop == "EPSILON") return JSValue::makeNumber(2.220446049250313e-16);
     }
     return JSValue::makeUndefined();
 }
@@ -928,6 +1012,205 @@ JSValue Interpreter::callFunction(const std::shared_ptr<JSFunction>& fn,
         return JSValue::makeUndefined();
     } catch (const ReturnSignal& ret) {
         return ret.value;
+    }
+}
+
+// ─── var hoisting ────────────────────────────────────────────────────────────
+void Interpreter::hoistVars(const std::vector<std::unique_ptr<ASTNode>>& stmts,
+                            std::shared_ptr<Environment> env) {
+    auto targetEnv = env->getFunctionOrGlobalEnv();
+    // First pass: hoist function declarations (they take priority)
+    for (const auto& stmt : stmts) {
+        if (auto* fnDecl = dynamic_cast<const FunctionDecl*>(stmt.get())) {
+            if (!fnDecl->isExpression && !fnDecl->name.empty()) {
+                // Evaluate the function declaration and define it
+                eval(*stmt, env);
+            }
+        }
+    }
+    // Second pass: hoist var declarations
+    for (const auto& stmt : stmts) {
+        if (auto* varDecl = dynamic_cast<const VarDecl*>(stmt.get())) {
+            if (varDecl->kind == "var") {
+                if (varDecl->pattern) {
+                    std::vector<std::string> names;
+                    collectPatternNames(varDecl->pattern.get(), names);
+                    for (const auto& n : names) {
+                        if (!targetEnv->has(n))
+                            targetEnv->define(n, JSValue::makeUndefined());
+                    }
+                } else if (!varDecl->name.empty() && !targetEnv->has(varDecl->name)) {
+                    targetEnv->define(varDecl->name, JSValue::makeUndefined());
+                }
+            }
+        }
+        // Recurse into blocks, if/else, loops, switch — but NOT into nested functions
+        else if (auto* block = dynamic_cast<const BlockStmt*>(stmt.get())) {
+            hoistVars(block->body, env);
+        }
+        else if (auto* ifStmt = dynamic_cast<const IfStmt*>(stmt.get())) {
+            if (ifStmt->consequent) {
+                if (auto* b = dynamic_cast<const BlockStmt*>(ifStmt->consequent.get()))
+                    hoistVars(b->body, env);
+            }
+            if (ifStmt->alternate) {
+                if (auto* b = dynamic_cast<const BlockStmt*>(ifStmt->alternate.get()))
+                    hoistVars(b->body, env);
+            }
+        }
+        else if (auto* forStmt = dynamic_cast<const ForStmt*>(stmt.get())) {
+            if (forStmt->body) {
+                if (auto* b = dynamic_cast<const BlockStmt*>(forStmt->body.get()))
+                    hoistVars(b->body, env);
+            }
+        }
+        else if (auto* whileStmt = dynamic_cast<const WhileStmt*>(stmt.get())) {
+            if (whileStmt->body) {
+                if (auto* b = dynamic_cast<const BlockStmt*>(whileStmt->body.get()))
+                    hoistVars(b->body, env);
+            }
+        }
+        else if (auto* doWhile = dynamic_cast<const DoWhileStmt*>(stmt.get())) {
+            if (doWhile->body) {
+                if (auto* b = dynamic_cast<const BlockStmt*>(doWhile->body.get()))
+                    hoistVars(b->body, env);
+            }
+        }
+        else if (auto* switchStmt = dynamic_cast<const SwitchStmt*>(stmt.get())) {
+            for (const auto& c : switchStmt->cases) {
+                hoistVars(c.consequent, env);
+            }
+        }
+        // Do NOT recurse into FunctionDecl — those have their own scope
+    }
+}
+
+// ─── Destructuring helpers ──────────────────────────────────────────────────
+void Interpreter::collectPatternNames(const ASTNode* pattern, std::vector<std::string>& names) {
+    if (auto* op = dynamic_cast<const ObjPatternNode*>(pattern)) {
+        for (const auto& e : op->elements) {
+            if (e.isRest) { names.push_back(e.name); continue; }
+            if (!e.name.empty()) names.push_back(e.name);
+            if (e.subPattern) collectPatternNames(e.subPattern.get(), names);
+        }
+    } else if (auto* ap = dynamic_cast<const ArrPatternNode*>(pattern)) {
+        for (const auto& e : ap->elements) {
+            if (e.isHole) continue;
+            if (e.isRest) { names.push_back(e.name); continue; }
+            if (!e.name.empty()) names.push_back(e.name);
+            if (e.subPattern) collectPatternNames(e.subPattern.get(), names);
+        }
+    }
+}
+
+void Interpreter::bindPattern(const ASTNode* pattern, const JSValue& value,
+                               std::shared_ptr<Environment> env) {
+    if (auto* op = dynamic_cast<const ObjPatternNode*>(pattern)) {
+        if (!value.isObject()) throw TypeError("Cannot destructure non-object value");
+        auto obj = value.asObject();
+        for (const auto& e : op->elements) {
+            if (e.isRest) {
+                // Rest: collect all keys not matched by other patterns
+                auto rest = std::make_shared<JSObject>();
+                std::set<std::string> matched;
+                for (const auto& el : op->elements) {
+                    if (el.isRest) continue;
+                    if (auto* id = dynamic_cast<const Identifier*>(el.key.get()))
+                        matched.insert(id->name);
+                }
+                for (const auto& k : obj->keys) {
+                    if (matched.find(k) == matched.end()) {
+                        rest->keys.push_back(k);
+                        rest->properties[k] = obj->properties.at(k);
+                    }
+                }
+                env->define(e.name, JSValue::makeObject(rest));
+                continue;
+            }
+            // Get key name
+            std::string keyName;
+            if (auto* id = dynamic_cast<const Identifier*>(e.key.get()))
+                keyName = id->name;
+            JSValue propVal = JSValue::makeUndefined();
+            if (obj->properties.count(keyName))
+                propVal = obj->properties.at(keyName);
+            else if (e.defaultVal)
+                propVal = eval(*e.defaultVal, env);
+            if (e.subPattern) {
+                bindPattern(e.subPattern.get(), propVal, env);
+            } else {
+                env->define(e.name, propVal);
+            }
+        }
+    } else if (auto* ap = dynamic_cast<const ArrPatternNode*>(pattern)) {
+        if (!value.isArray()) throw TypeError("Cannot destructure non-array value");
+        auto arr = value.asArray();
+        int idx = 0;
+        for (const auto& e : ap->elements) {
+            if (e.isHole) { idx++; continue; }
+            if (e.isRest) {
+                auto restArr = std::make_shared<std::vector<JSValue>>();
+                for (size_t i = idx; i < arr->size(); ++i)
+                    restArr->push_back((*arr)[i]);
+                env->define(e.name, JSValue::makeArray(restArr));
+                return; // rest consumes the rest
+            }
+            JSValue elemVal = JSValue::makeUndefined();
+            if (idx < static_cast<int>(arr->size()))
+                elemVal = (*arr)[idx];
+            else if (e.defaultVal)
+                elemVal = eval(*e.defaultVal, env);
+            if (e.subPattern) {
+                bindPattern(e.subPattern.get(), elemVal, env);
+            } else {
+                env->define(e.name, elemVal);
+            }
+            idx++;
+        }
+    }
+}
+
+void Interpreter::assignFromPattern(const ASTNode* target, const JSValue& value,
+                                     std::shared_ptr<Environment> env) {
+    if (auto* arrLit = dynamic_cast<const ArrayLiteral*>(target)) {
+        if (!value.isArray()) throw TypeError("Cannot destructure non-array value");
+        auto arr = value.asArray();
+        int idx = 0;
+        for (const auto& elem : arrLit->elements) {
+            if (!elem) { idx++; continue; } // hole
+            if (elem->kind == NodeKind::Spread) {
+                auto* sp = dynamic_cast<const SpreadElement*>(elem.get());
+                auto restArr = std::make_shared<std::vector<JSValue>>();
+                for (size_t i = idx; i < arr->size(); ++i)
+                    restArr->push_back((*arr)[i]);
+                if (auto* id = dynamic_cast<const Identifier*>(sp->argument.get()))
+                    env->set(id->name, JSValue::makeArray(restArr));
+                return;
+            }
+            JSValue elemVal = (idx < static_cast<int>(arr->size())) ? (*arr)[idx] : JSValue::makeUndefined();
+            if (auto* id = dynamic_cast<const Identifier*>(elem.get())) {
+                env->set(id->name, elemVal);
+            } else if (dynamic_cast<const ArrayLiteral*>(elem.get()) || dynamic_cast<const ObjectLiteral*>(elem.get())) {
+                assignFromPattern(elem.get(), elemVal, env);
+            }
+            idx++;
+        }
+    } else if (auto* objLit = dynamic_cast<const ObjectLiteral*>(target)) {
+        if (!value.isObject()) throw TypeError("Cannot destructure non-object value");
+        auto obj = value.asObject();
+        for (const auto& prop : objLit->properties) {
+            std::string keyName;
+            if (auto* id = dynamic_cast<const Identifier*>(prop.key.get()))
+                keyName = id->name;
+            else if (prop.computed)
+                keyName = toString(eval(*prop.key, env));
+            JSValue propVal = obj->properties.count(keyName) ? obj->properties.at(keyName) : JSValue::makeUndefined();
+            if (auto* id = dynamic_cast<const Identifier*>(prop.value.get())) {
+                env->set(id->name, propVal);
+            } else if (dynamic_cast<const ArrayLiteral*>(prop.value.get()) || dynamic_cast<const ObjectLiteral*>(prop.value.get())) {
+                assignFromPattern(prop.value.get(), propVal, env);
+            }
+        }
     }
 }
 

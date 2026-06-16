@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <memory>
 #include <string>
+#include <vector>
 #include "value.hpp"
 
 namespace jsling {
@@ -14,6 +15,7 @@ public:
     JSValue get(const std::string& name) const;
     void set(const std::string& name, JSValue value);
     bool has(const std::string& name) const;
+    std::vector<std::string> visibleNames() const;
 
     bool isFunctionOrGlobal = false;
     std::shared_ptr<Environment> getFunctionOrGlobalEnv();

@@ -10,14 +10,20 @@ class Interpreter {
 public:
     Interpreter();
     void interpret(const Program& program);
+    JSValue interpretAndReturn(const Program& program);
     JSValue eval(const ASTNode& node, std::shared_ptr<Environment> env);
     JSValue callFunction(const std::shared_ptr<JSFunction>& fn,
                          const std::vector<JSValue>& args,
                          JSValue thisVal = JSValue::makeUndefined());
     std::shared_ptr<Environment> getGlobalEnv() { return globalEnv_; }
 
+    // Destructuring: bind pattern to value in env (public for bindFunctionArgs)
+    void bindPattern(const ASTNode* pattern, const JSValue& value,
+                     std::shared_ptr<Environment> env);
+
 private:
     std::shared_ptr<Environment> globalEnv_;
+    JSValue currentThis_ = JSValue::makeUndefined(); // current this binding for method calls
     void setupGlobals();
 
     JSValue evalProgram(const Program& node, std::shared_ptr<Environment> env);
@@ -59,6 +65,15 @@ private:
     JSValue callMethod(const JSValue& object, const std::string& method,
                        const std::vector<JSValue>& args);
     JSValue getProperty(const JSValue& object, const std::string& prop);
+
+    // var hoisting: pre-define var declarations in function/global scope
+    void hoistVars(const std::vector<std::unique_ptr<ASTNode>>& stmts,
+                   std::shared_ptr<Environment> env);
+
+    // Destructuring
+    void assignFromPattern(const ASTNode* target, const JSValue& value,
+                           std::shared_ptr<Environment> env);
+    void collectPatternNames(const ASTNode* pattern, std::vector<std::string>& names);
 };
 
 } // namespace jsling

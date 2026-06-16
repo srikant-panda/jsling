@@ -96,6 +96,76 @@ do_uninstall() {
     exit 0
 }
 
+# --- Auto-detect and install dependencies on Linux ---
+detect_distro_and_install_deps() {
+    local missing=()
+    command -v cmake &>/dev/null || missing+=("cmake")
+    (command -v g++ &>/dev/null || command -v clang++ &>/dev/null) || missing+=("C++ compiler (g++/clang++)")
+    (command -v make &>/dev/null || command -v ninja &>/dev/null) || missing+=("build tool (make/ninja)")
+
+    if [ ${#missing[@]} -eq 0 ]; then
+        info "All dependencies are satisfied."
+        return 0
+    fi
+
+    warn "Missing dependencies: ${missing[*]}"
+    
+    local install_choice
+    read -p "Would you like to install the missing dependencies automatically? [y/N]: " -r install_choice
+    if [[ ! "$install_choice" =~ ^[Yy]$ ]]; then
+        fail "Cannot proceed without dependencies. Please install ${missing[*]} manually."
+    fi
+
+    local cmd=""
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        case "$ID" in
+            ubuntu|debian|pop|mint)
+                cmd="apt-get update && apt-get install -y cmake build-essential"
+                ;;
+            fedora)
+                cmd="dnf install -y cmake gcc-c++ make"
+                ;;
+            arch|manjaro)
+                cmd="pacman -Syu --noconfirm cmake base-devel"
+                ;;
+            alpine)
+                cmd="apk update && apk add cmake g++ make"
+                ;;
+            centos|rhel)
+                cmd="yum install -y cmake gcc-c++ make"
+                ;;
+        esac
+    fi
+
+    if [ -z "$cmd" ]; then
+        if command -v apt-get &>/dev/null; then
+            cmd="apt-get update && apt-get install -y cmake build-essential"
+        elif command -v dnf &>/dev/null; then
+            cmd="dnf install -y cmake gcc-c++ make"
+        elif command -v pacman &>/dev/null; then
+            cmd="pacman -Syu --noconfirm cmake base-devel"
+        elif command -v apk &>/dev/null; then
+            cmd="apk update && apk add cmake g++ make"
+        elif command -v yum &>/dev/null; then
+            cmd="yum install -y cmake gcc-c++ make"
+        else
+            fail "Unable to auto-detect package manager. Please install ${missing[*]} manually."
+        fi
+    fi
+
+    info "Installing dependencies via: $cmd"
+    
+    if [ "$(id -u)" != "0" ]; then
+        info "Elevated privileges (sudo) are required to install packages. Requesting password..."
+        eval "sudo $cmd" || fail "Dependency installation failed."
+    else
+        eval "$cmd" || fail "Dependency installation failed."
+    fi
+
+    success "Dependencies installed successfully."
+}
+
 # --- Main ---
 main() {
     echo ""
@@ -107,6 +177,15 @@ main() {
     os="$(detect_os)"
 
     [ "$UNINSTALL" = true ] && do_uninstall
+
+    if [ "$os" = "linux" ]; then
+        local install_confirm
+        read -p "Do you want to proceed with installing jsling on Linux? [Y/n]: " -r install_confirm
+        if [[ "$install_confirm" =~ ^[Nn]$ ]]; then
+            info "Installation aborted by user."
+            exit 0
+        fi
+    fi
 
     info "Source directory: $PROJECT_DIR"
 
@@ -120,10 +199,22 @@ main() {
 
     # Check dependencies
     info "Checking dependencies..."
-    command -v cmake &>/dev/null || fail "cmake not found"
-    (command -v g++ &>/dev/null || command -v clang++ &>/dev/null) || fail "C++ compiler not found (need g++ or clang++)"
-    (command -v make &>/dev/null || command -v ninja &>/dev/null) || fail "Build tool not found (need make or ninja)"
-    success "Dependencies OK"
+    local has_deps=true
+    command -v cmake &>/dev/null || has_deps=false
+    (command -v g++ &>/dev/null || command -v clang++ &>/dev/null) || has_deps=false
+    (command -v make &>/dev/null || command -v ninja &>/dev/null) || has_deps=false
+
+    if [ "$has_deps" = false ]; then
+        if [ "$os" = "linux" ]; then
+            detect_distro_and_install_deps
+        else
+            command -v cmake &>/dev/null || fail "cmake not found"
+            (command -v g++ &>/dev/null || command -v clang++ &>/dev/null) || fail "C++ compiler not found (need g++ or clang++)"
+            (command -v make &>/dev/null || command -v ninja &>/dev/null) || fail "Build tool not found (need make or ninja)"
+        fi
+    else
+        success "Dependencies OK"
+    fi
 
     # Build
     local build_dir="$PROJECT_DIR/build-release"
@@ -134,14 +225,16 @@ main() {
     elif command -v sysctl &>/dev/null; then cores="$(sysctl -n hw.ncpu 2>/dev/null || echo 1)"
     else cores=1; fi
 
-    cmake -S "$PROJECT_DIR" -B "$build_dir" \
+    if ! cmake -S "$PROJECT_DIR" -B "$build_dir" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="$PREFIX" \
-        -DCMAKE_CXX_STANDARD=17 \
-        > /dev/null 2>&1 || fail "CMake configure failed"
+        -DCMAKE_CXX_STANDARD=17; then
+        fail "CMake configuration failed. See configuration errors above."
+    fi
 
-    cmake --build "$build_dir" --config Release -j"$cores" \
-        > /dev/null 2>&1 || fail "Build failed"
+    if ! cmake --build "$build_dir" --config Release -j"$cores"; then
+        fail "Build failed. See compilation errors above."
+    fi
 
     success "Build complete"
 

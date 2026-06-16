@@ -67,16 +67,27 @@ std::unique_ptr<BlockStmt> Parser::parseBlock() {
 std::unique_ptr<ASTNode> Parser::parseVarDecl() {
     std::string kind = advance().lexeme; // var/let/const
 
-    auto firstDecl = std::make_unique<VarDecl>();
-    firstDecl->kind = kind;
-    if (check(TokenType::Identifier)) {
-        firstDecl->name = advance().lexeme;
-    } else {
-        throw SyntaxError("Expected identifier after " + kind + " at line " + std::to_string(current().line));
-    }
-    if (match(TokenType::Equal)) {
-        firstDecl->initializer = parseAssignmentExpression();
-    }
+    auto parseOneDecl = [&]() -> std::unique_ptr<VarDecl> {
+        auto decl = std::make_unique<VarDecl>();
+        decl->kind = kind;
+        if (check(TokenType::LeftBrace)) {
+            // Object destructuring
+            decl->pattern = parseObjPattern();
+        } else if (check(TokenType::LeftBracket)) {
+            // Array destructuring
+            decl->pattern = parseArrPattern();
+        } else if (check(TokenType::Identifier)) {
+            decl->name = advance().lexeme;
+        } else {
+            throw SyntaxError("Expected identifier or destructuring pattern after " + kind + " at line " + std::to_string(current().line));
+        }
+        if (match(TokenType::Equal)) {
+            decl->initializer = parseAssignmentExpression();
+        }
+        return decl;
+    };
+
+    auto firstDecl = parseOneDecl();
 
     // Check for comma-separated declarations: let a = 1, b = 2;
     if (!check(TokenType::Comma)) {
@@ -88,17 +99,7 @@ std::unique_ptr<ASTNode> Parser::parseVarDecl() {
     auto list = std::make_unique<StmtList>();
     list->stmts.push_back(std::move(firstDecl));
     while (match(TokenType::Comma)) {
-        auto decl = std::make_unique<VarDecl>();
-        decl->kind = kind;
-        if (check(TokenType::Identifier)) {
-            decl->name = advance().lexeme;
-        } else {
-            throw SyntaxError("Expected identifier after ',' at line " + std::to_string(current().line));
-        }
-        if (match(TokenType::Equal)) {
-            decl->initializer = parseAssignmentExpression();
-        }
-        list->stmts.push_back(std::move(decl));
+        list->stmts.push_back(parseOneDecl());
     }
     match(TokenType::Semicolon);
     return list;
@@ -576,6 +577,76 @@ std::unique_ptr<ASTNode> Parser::parsePrimaryExpression() {
     }
     if (check(TokenType::LeftParen)) {
         advance();
+        // Arrow function with destructuring params: ([k, v]) => ... or ({a, b}) => ...
+        if (check(TokenType::LeftBracket) || check(TokenType::LeftBrace)) {
+            size_t savedPos2 = pos_;
+            std::vector<std::string> dParams;
+            std::vector<std::unique_ptr<ASTNode>> dPatterns;
+            std::vector<std::unique_ptr<ASTNode>> dDefaults;
+            bool dValid = true;
+            try {
+                while (!check(TokenType::RightParen) && !isAtEnd()) {
+                    if (check(TokenType::LeftBracket)) {
+                        std::string tempName = "__dp_" + std::to_string(dParams.size());
+                        dParams.push_back(tempName);
+                        dPatterns.push_back(parseArrPattern());
+                        dDefaults.push_back(nullptr);
+                    } else if (check(TokenType::LeftBrace)) {
+                        std::string tempName = "__dp_" + std::to_string(dParams.size());
+                        dParams.push_back(tempName);
+                        dPatterns.push_back(parseObjPattern());
+                        dDefaults.push_back(nullptr);
+                    } else if (check(TokenType::Spread)) {
+                        advance();
+                        auto fn2 = std::make_unique<FunctionDecl>();
+                        fn2->hasRest = true;
+                        fn2->restParam = consume(TokenType::Identifier, "Expected rest name").lexeme;
+                        fn2->params = std::move(dParams);
+                        fn2->paramPatterns = std::move(dPatterns);
+                        fn2->defaults = std::move(dDefaults);
+                        consume(TokenType::RightParen, "Expected ')'");
+                        consume(TokenType::Arrow, "Expected '=>'");
+                        if (check(TokenType::LeftBrace)) {
+                            fn2->body = parseBlock();
+                        } else {
+                            auto ret = std::make_unique<ReturnStmt>();
+                            ret->argument = parseAssignmentExpression();
+                            fn2->body = std::make_unique<BlockStmt>();
+                            fn2->body->body.push_back(std::move(ret));
+                        }
+                        return fn2;
+                    } else {
+                        dParams.push_back(consume(TokenType::Identifier, "Expected param").lexeme);
+                        dPatterns.push_back(nullptr);
+                        if (match(TokenType::Equal))
+                            dDefaults.push_back(parseAssignmentExpression());
+                        else
+                            dDefaults.push_back(nullptr);
+                    }
+                    if (!check(TokenType::RightParen)) consume(TokenType::Comma, "Expected ','");
+                }
+            } catch (const SyntaxError&) {
+                dValid = false;
+            }
+            if (dValid && check(TokenType::RightParen) && pos_ + 1 < tokens_.size() && tokens_[pos_ + 1].type == TokenType::Arrow) {
+                advance(); advance(); // skip ) and =>
+                auto fn2 = std::make_unique<FunctionDecl>();
+                fn2->params = std::move(dParams);
+                fn2->paramPatterns = std::move(dPatterns);
+                fn2->defaults = std::move(dDefaults);
+                if (check(TokenType::LeftBrace)) {
+                    fn2->body = parseBlock();
+                } else {
+                    auto ret = std::make_unique<ReturnStmt>();
+                    ret->argument = parseAssignmentExpression();
+                    fn2->body = std::make_unique<BlockStmt>();
+                    fn2->body->body.push_back(std::move(ret));
+                }
+                return fn2;
+            }
+            // Not valid, restore and try normal
+            pos_ = savedPos2;
+        }
         // Check for arrow function: () =>, (x, y) =>, or (x = 1, ...rest) =>
         size_t savedPos = pos_;
         std::vector<std::string> arrowParams;
@@ -605,6 +676,7 @@ std::unique_ptr<ASTNode> Parser::parsePrimaryExpression() {
     if (check(TokenType::Function)) {
         advance();
         auto fn = std::make_unique<FunctionDecl>();
+        fn->isExpression = true;
         if (check(TokenType::Identifier)) fn->name = advance().lexeme;
         consume(TokenType::LeftParen, "Expected '('");
         parseFunctionParams(fn->params, fn->defaults, fn->hasRest, fn->restParam);
@@ -646,6 +718,11 @@ std::unique_ptr<ASTNode> Parser::parseObjectLiteral() {
             obj->properties.push_back(std::move(prop));
             if (!check(TokenType::RightBrace)) consume(TokenType::Comma, "Expected ','");
             continue;
+        } else if (match(TokenType::LeftBracket)) {
+            // Computed property: [expr]: value
+            prop.key = parseAssignmentExpression();
+            prop.computed = true;
+            consume(TokenType::RightBracket, "Expected ']'");
         } else if (check(TokenType::String)) {
             auto key = std::make_unique<Literal>();
             key->literalType = LiteralType::String;
@@ -663,7 +740,16 @@ std::unique_ptr<ASTNode> Parser::parseObjectLiteral() {
         } else {
             throw SyntaxError("Expected property name at line " + std::to_string(current().line));
         }
-        if (match(TokenType::Colon)) {
+        // Shorthand method: name(params) { body }
+        if (check(TokenType::LeftParen) && !prop.computed) {
+            auto fn = std::make_unique<FunctionDecl>();
+            fn->isExpression = true;
+            consume(TokenType::LeftParen, "Expected '('");
+            parseFunctionParams(fn->params, fn->defaults, fn->hasRest, fn->restParam);
+            consume(TokenType::RightParen, "Expected ')'");
+            fn->body = parseBlock();
+            prop.value = std::move(fn);
+        } else if (match(TokenType::Colon)) {
             prop.value = parseAssignmentExpression();
         } else {
             // Shorthand: { x } means { x: x }
@@ -719,6 +805,92 @@ std::unique_ptr<ASTNode> Parser::parseTemplateLiteral() {
     }
     tpl->strings.push_back(currentStr);
     return tpl;
+}
+
+// ─── Destructuring Patterns ────────────────────────────────────────────────
+
+std::unique_ptr<ObjPatternNode> Parser::parseObjPattern() {
+    consume(TokenType::LeftBrace, "Expected '{'");
+    auto pat = std::make_unique<ObjPatternNode>();
+    while (!check(TokenType::RightBrace) && !isAtEnd()) {
+        if (check(TokenType::Spread)) {
+            advance(); // ...
+            Pattern p;
+            p.isRest = true;
+            p.name = consume(TokenType::Identifier, "Expected rest name").lexeme;
+            pat->elements.push_back(std::move(p));
+        } else {
+            pat->elements.push_back(parsePatternElement());
+        }
+        if (!check(TokenType::RightBrace)) consume(TokenType::Comma, "Expected ','");
+    }
+    consume(TokenType::RightBrace, "Expected '}'");
+    return pat;
+}
+
+std::unique_ptr<ArrPatternNode> Parser::parseArrPattern() {
+    consume(TokenType::LeftBracket, "Expected '['");
+    auto pat = std::make_unique<ArrPatternNode>();
+    while (!check(TokenType::RightBracket) && !isAtEnd()) {
+        if (check(TokenType::Comma)) {
+            // Hole: [a, , b]
+            Pattern p;
+            p.isHole = true;
+            pat->elements.push_back(std::move(p));
+            advance(); // skip comma
+            continue;
+        }
+        if (check(TokenType::Spread)) {
+            advance(); // ...
+            Pattern p;
+            p.isRest = true;
+            p.name = consume(TokenType::Identifier, "Expected rest name").lexeme;
+            pat->elements.push_back(std::move(p));
+        } else {
+            pat->elements.push_back(parsePatternElement());
+        }
+        if (!check(TokenType::RightBracket)) consume(TokenType::Comma, "Expected ','");
+    }
+    consume(TokenType::RightBracket, "Expected ']'");
+    return pat;
+}
+
+Pattern Parser::parsePatternElement() {
+    Pattern p;
+    if (check(TokenType::LeftBrace)) {
+        // Nested object pattern: key: {nested}
+        p.key = std::make_unique<Identifier>();
+        // Actually, this is {key: {subpattern}} — key is required
+        throw SyntaxError("Nested object pattern without key at line " + std::to_string(current().line));
+    }
+    if (check(TokenType::LeftBracket)) {
+        // This shouldn't happen without a key
+        throw SyntaxError("Nested array pattern without key at line " + std::to_string(current().line));
+    }
+    // Must be identifier
+    std::string ident = consume(TokenType::Identifier, "Expected identifier in pattern").lexeme;
+    if (match(TokenType::Colon)) {
+        // Renamed: key: newName or key: {nested} or key: [nested]
+        p.key = std::make_unique<Identifier>();
+        static_cast<Identifier*>(p.key.get())->name = ident;
+        if (check(TokenType::LeftBrace)) {
+            p.subPattern = parseObjPattern();
+        } else if (check(TokenType::LeftBracket)) {
+            p.subPattern = parseArrPattern();
+        } else {
+            p.name = consume(TokenType::Identifier, "Expected identifier").lexeme;
+        }
+    } else {
+        // Shorthand: just the name
+        p.name = ident;
+        p.key = std::make_unique<Identifier>();
+        static_cast<Identifier*>(p.key.get())->name = ident;
+    }
+    // Default value: = expr
+    if (match(TokenType::Equal)) {
+        p.defaultVal = parseAssignmentExpression();
+    }
+    return p;
 }
 
 } // namespace jsling

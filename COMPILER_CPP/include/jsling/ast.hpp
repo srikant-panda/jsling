@@ -11,7 +11,8 @@ enum class NodeKind {
     Switch, Break, Continue, ExprStmt,
     Binary, Unary, Update, Assign, Logical, Call, Member, New,
     Array, Object, Conditional, Template, Spread,
-    Identifier, Literal, StmtList
+    Identifier, Literal, StmtList,
+    ObjPattern, ArrPattern
 };
 
 struct ASTNode {
@@ -30,10 +31,34 @@ struct BlockStmt : ASTNode {
     BlockStmt() : ASTNode(NodeKind::Block) {}
 };
 
+// Pattern element for destructuring
+struct Pattern {
+    std::string name;                        // target variable name (for leaf patterns)
+    std::unique_ptr<ASTNode> key;            // key expression (for object patterns)
+    std::unique_ptr<ASTNode> defaultVal;     // default value expression
+    std::unique_ptr<ASTNode> subPattern;     // nested object/array pattern
+    bool isRest = false;                     // ...rest
+    bool isHole = false;                     // array hole: [a, , b]
+    Pattern() = default;
+    Pattern(Pattern&&) = default;
+    Pattern& operator=(Pattern&&) = default;
+};
+
+struct ObjPatternNode : ASTNode {
+    std::vector<Pattern> elements;
+    ObjPatternNode() : ASTNode(NodeKind::ObjPattern) {}
+};
+
+struct ArrPatternNode : ASTNode {
+    std::vector<Pattern> elements;
+    ArrPatternNode() : ASTNode(NodeKind::ArrPattern) {}
+};
+
 struct VarDecl : ASTNode {
     std::string kind; // "var", "let", "const"
     std::string name;
     std::unique_ptr<ASTNode> initializer;
+    std::unique_ptr<ASTNode> pattern; // null for simple, ObjPatternNode or ArrPatternNode for destructuring
     VarDecl() : ASTNode(NodeKind::VarDecl) {}
 };
 
@@ -44,6 +69,8 @@ struct FunctionDecl : ASTNode {
     bool hasRest = false;
     std::string restParam; // name of ...rest parameter
     std::unique_ptr<BlockStmt> body;
+    bool isExpression = false; // true for function expressions (const f = function name() {})
+    std::vector<std::unique_ptr<ASTNode>> paramPatterns; // destructuring patterns per param (null if simple)
     FunctionDecl() : ASTNode(NodeKind::FunctionDecl) {}
 };
 

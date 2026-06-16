@@ -65,6 +65,11 @@ private:
     std::unique_ptr<ASTNode> parseTemplateLiteral();
     std::unique_ptr<ASTNode> parseArrowFunctionBody(std::vector<std::string> params, std::vector<std::unique_ptr<ASTNode>> defaults, bool hasRest, const std::string& restParam);
     void parseFunctionParams(std::vector<std::string>& params, std::vector<std::unique_ptr<ASTNode>>& defaults, bool& hasRest, std::string& restParam);
+
+    // Destructuring patterns
+    std::unique_ptr<ObjPatternNode> parseObjPattern();
+    std::unique_ptr<ArrPatternNode> parseArrPattern();
+    Pattern parsePatternElement(); // single element in a pattern
 };
 
 } // namespace jsling

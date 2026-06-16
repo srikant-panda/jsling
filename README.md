@@ -1,4 +1,4 @@
-# 🚀 jsling
+# jsling
 
 <p align="center">
   <img src="assets/jsling.svg" width="160" alt="jsling logo" />
@@ -17,11 +17,11 @@
 
 ---
 
-`jsling` lexes, parses, and interprets JavaScript source code using a tree-walking interpreter, supporting a growing subset of ES6+ features. Designed to match Node.js behavior, output formatting, and CLI flags.
+`jsling` lexes, parses, and interprets JavaScript source code using a tree-walking interpreter, supporting a wide subset of ES6+ features. Designed to match Node.js behavior, output formatting, CLI flags, interactive REPL behavior, and diagnostic error reporting.
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 🐧 Linux / macOS
 
@@ -48,7 +48,7 @@ nmake
 
 ---
 
-## 🏃 Run It
+## Run It
 
 ```bash
 # Run a script file
@@ -65,7 +65,7 @@ nmake
 
 ---
 
-## 🧪 Try It Out
+## Try It Out
 
 Create a file named `demo.js`:
 
@@ -105,7 +105,7 @@ Run it with:
 
 ---
 
-## 📐 Architecture & Execution Pipeline
+## Architecture & Execution Pipeline
 
 `jsling` uses a classic interpreter design consisting of a Lexer, a Parser (Recursive Descent with Precedence Climbing), an AST representation, and a Tree-Walking Interpreter backed by a Lexical Environment chain.
 
@@ -240,35 +240,46 @@ When looking up a variable:
 
 ---
 
-## ✨ Key Features & Language Support
+## Key Features & Language Support
 
 `jsling` provides robust support for a substantial subset of ES6+ syntax and built-in prototypes:
 
-### 🧩 Language Constructs
+### Language Constructs
 
 | Category | Supported Features & Syntax |
 |---|---|
-| **Variables & Binding** | `let` & `const` (block-scoped), `var` (function-scoped), with comma-separated declarations (e.g., `let a = 1, b = 2`) |
+| **Variables & Binding** | `let` & `const` (block-scoped), `var` (function-scoped) with hoisting, comma-separated declarations (e.g., `let a = 1, b = 2`), and **array/object destructuring** with rest/default values (e.g., `const {x, y: z = 10} = obj`) |
 | **Functions** | First-class functions, closures, recursion, lexical scope, arrow functions (`x => x * 2`), and default parameters |
-| **Parameters & Spread** | Rest parameters (`function f(...args)`), spread arguments (`f(...arr)`), array/object spread (`[...a, ...b]`, `{...obj, z: 3}`) |
+| **Parameters & Spread** | Rest parameters (`function f(...args)`), spread arguments (`f(...arr)`), array/object spread (`[...a, ...b]`, `{...obj, z: 3}`), and **parameter destructuring** |
 | **Control Flow** | `if-else`, loops (`for`, `while`, `do-while`), `switch-case`, control flow statements (`break`, `continue`, `return`) |
 | **Operators** | Logical (`&&`, `||`, `!`), comparison (`==`, `===`, `!=`, `!==`, `<`, `>`, `<=`, `>=`), bitwise (`&`, `\|`, `^`, `<<`, `>>`, `>>>`), postfix/prefix (`++`, `--`), and ternary (`? :`) |
 | **Template Strings** | Full template literals (`` `Hello ${name}!` ``) with support for nested evaluation |
+| **Object Literals** | Property shorthand (`{x}`), computed property keys (e.g., `{[expr]: value}`), and shorthand method definitions (`method() {}`) |
 
-### 📦 Standard Library & Built-ins
+### Standard Library & Built-ins
 
 | Namespace / Class | Supported Methods |
 |---|---|
-| 🎛️ **Globals & I/O** | `console.log`, `parseInt`, `parseFloat`, `Date` |
-| 🧮 **Math** | All core properties & methods: `Math.floor`, `Math.ceil`, `Math.random`, `Math.abs`, `Math.pow`, `Math.sqrt`, `Math.sin`, `Math.cos`, etc. |
-| 🗂️ **Array** | `.map()`, `.filter()`, `.reduce()`, `.forEach()`, `.find()`, `.some()`, `.every()`, `.sort()`, `.splice()`, `.slice()`, `.join()`, `.includes()`, `.indexOf()`, `.push()`, `.pop()`, `.shift()`, `.unshift()`, `.reverse()`, `.concat()` |
-| 🔤 **String** | `.split()`, `.slice()`, `.includes()`, `.indexOf()`, `.replace()`, `.replaceAll()`, `.trim()`, `.toUpperCase()`, `.toLowerCase()`, `.startsWith()`, `.endsWith()`, `.repeat()`, `.padStart()`, `.padEnd()`, `.charAt()`, `.substring()`, `.concat()` |
-| 🔢 **Number** | `.toFixed()`, `.toString(radix)` |
-| 🗃️ **Object** | `Object.keys()`, `Object.values()`, `Object.entries()`, `Object.assign()`, `Object.freeze()` |
+|  **Globals & I/O** | `console.log`, `parseInt`, `parseFloat`, `Date` |
+|  **Math** | All core properties & methods: `Math.floor`, `Math.ceil`, `Math.random`, `Math.abs`, `Math.pow`, `Math.sqrt`, `Math.sin`, `Math.cos`, etc. |
+|  **Array** | `.map()`, `.filter()`, `.reduce()`, `.forEach()`, `.find()`, `.some()`, `.every()`, `.sort()`, `.splice()`, `.slice()`, `.join()`, `.includes()`, `.indexOf()`, `.push()`, `.pop()`, `.shift()`, `.unshift()`, `.reverse()`, `.concat()` |
+|  **String** | `.split()`, `.slice()`, `.includes()`, `.indexOf()`, `.replace()`, `.replaceAll()`, `.trim()`, `.toUpperCase()`, `.toLowerCase()`, `.startsWith()`, `.endsWith()`, `.repeat()`, `.padStart()`, `.padEnd()`, `.charAt()`, `.substring()`, `.concat()` |
+|  **Number** | `.toFixed()`, `.toString(radix)` |
+|  **Object** | `Object.keys()`, `Object.values()`, `Object.entries()`, `Object.assign()`, `Object.freeze()` |
+
+### Interactive REPL & Error Diagnostics
+
+| Feature | Capabilities |
+|---|---|
+| **Brace-Balancing** | Multiline REPL inputs automatically defer execution until all open `{`, `(`, and `[` braces are matched. |
+| **Node.js-style REPL** | Direct expression evaluation feedback; automatically prints non-`undefined` statement/expression outputs. |
+| **Colorized Inspection** | ANSI-colored terminal printer formatting arrays, objects, functions, dates, and primitives with depth tracking. |
+| **Diagnostic Tracebacks** | Standard JS error categorization (`TypeError`, `ReferenceError`, `SyntaxError`, `RangeError`) with formatted carets and source lines. |
+| **Typo Auto-Suggestions** | Auto-suggestion spellchecks (`Did you mean '...'?`) using Levenshtein distance against environment scope variables and keyword sets. |
 
 ---
 
-## 🏆 Hackathon Evaluation Test Cases
+## Hackathon Evaluation Test Cases
 
 **5 test cases × 20 points = 100 points total**
 
@@ -292,7 +303,7 @@ bash scripts/run-hackathon-testcase.sh
 ### 📋 Test Case Specifications
 
 <details>
-<summary>🔍 <b>TC-1: Odd / Even Checker</b> (20 Points)</summary>
+<summary><b>TC-1: Odd / Even Checker</b> (20 Points)</summary>
 
 ```javascript
 let num = 7;
@@ -306,7 +317,7 @@ if (num % 2 === 0) {
 </details>
 
 <details>
-<summary>🔍 <b>TC-2: Triangle Pattern</b> (20 Points)</summary>
+<summary><b>TC-2: Triangle Pattern</b> (20 Points)</summary>
 
 ```javascript
 for (let i = 1; i <= 5; i++) {
@@ -326,7 +337,7 @@ for (let i = 1; i <= 5; i++) {
 </details>
 
 <details>
-<summary>🔍 <b>TC-3: Armstrong Number Checker</b> (20 Points)</summary>
+<summary><b>TC-3: Armstrong Number Checker</b> (20 Points)</summary>
 
 ```javascript
 function isArmstrong(num) {
@@ -345,7 +356,7 @@ console.log(isArmstrong(123));  // Expected: false
 </details>
 
 <details>
-<summary>🔍 <b>TC-4: Array Reverse via Spread</b> (20 Points)</summary>
+<summary><b>TC-4: Array Reverse via Spread</b> (20 Points)</summary>
 
 ```javascript
 let arr = [1, 2, 3, 4, 5];
@@ -359,7 +370,7 @@ console.log("Reversed: " + reversed.join(", "));
 </details>
 
 <details>
-<summary>🔍 <b>TC-5: String Palindrome Check</b> (20 Points)</summary>
+<summary><b>TC-5: String Palindrome Check</b> (20 Points)</summary>
 
 ```javascript
 let str = "racecar";
@@ -375,7 +386,7 @@ if (str === reversed) {
 
 ---
 
-### 📂 Test File Structure
+### Test File Structure
 
 ```
 COMPILER_CPP/tests/hackathon_testcase/
@@ -386,7 +397,7 @@ COMPILER_CPP/tests/hackathon_testcase/
 └── tc5_palindrome.js     + tc5_palindrome.expected
 ```
 
-### 🏆 Full Test Suite
+### Full Test Suite
 
 ```bash
 cd COMPILER_CPP
@@ -397,7 +408,7 @@ This script executes all `.js` files in `tests/` and automatically compares thei
 
 ---
 
-## ⚙️ System Installation
+## System Installation
 
 ### 🐧 Linux / macOS
 ```bash
@@ -416,58 +427,60 @@ For detailed setup walkthroughs and troubleshooting, see [INSTALL.md](file:///ho
 
 ---
 
-## 📂 Project Structure & Navigation
+## Project Structure & Navigation
 
 Below is a detailed map of the project files. Every file and folder name is a clickable link to let you explore the source code directly:
 
-* 📄 [README.md](file:///home/hariomm/Projects/jsling/README.md) — Main landing page & architecture overview
-* 📖 [INSTALL.md](file:///home/hariomm/Projects/jsling/INSTALL.md) — Detailed installation & build instructions
-* 📝 [CPP_IMPLEMENTATION.md](file:///home/hariomm/Projects/jsling/CPP_IMPLEMENTATION.md) — Detailed implementation blueprint & status checklist
-* 🛠️ [build-installer.bat](file:///home/hariomm/Projects/jsling/build-installer.bat) — Automated batch script to package Windows binary
-* 📦 [jsling.iss](file:///home/hariomm/Projects/jsling/jsling.iss) — Windows installer installer generator script
-* 🎨 [assets/](file:///home/hariomm/Projects/jsling/assets) — Workspace icons, branding assets, and preview screenshots
-  * 🖼️ [jsling-preview.png](file:///home/hariomm/Projects/jsling/assets/jsling-preview.png) — Preview screen capture
-  * 🎨 [jsling.svg](file:///home/hariomm/Projects/jsling/assets/jsling.svg) — Vector logo designed for the project
-* 💻 [COMPILER_CPP/](file:///home/hariomm/Projects/jsling/COMPILER_CPP) — Core C++17 runtime source directory
-  * ⚙️ [CMakeLists.txt](file:///home/hariomm/Projects/jsling/COMPILER_CPP/CMakeLists.txt) — CMake configuration file
-  * 📂 [include/jsling/](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling) — Core C++ Header Files
-    * 🔑 [token.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/token.hpp) — Token type and structure definitions
-    * 🔍 [lexer.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/lexer.hpp) — Lexical analyzer declarations
-    * 🗂️ [ast.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/ast.hpp) — Abstract Syntax Tree node structs
-    * 📈 [parser.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/parser.hpp) — Recursive descent parser declarations
-    * 🌐 [environment.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/environment.hpp) — Scope mapping and parent links
-    * 💎 [value.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/value.hpp) — Tagged union `JSValue` definition
-    * 📚 [builtins.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/builtins.hpp) — Prototypes for built-in JavaScript functions
-    * ⚙️ [interpreter.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/interpreter.hpp) — Evaluation visitor engine declarations
-    * ⚠️ [errors.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/errors.hpp) — Internal signal & error representation
-    * 🔎 [inspect.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/inspect.hpp) — Node.js-compatible value formatter declarations
-    * 🖥️ [cli.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/cli.hpp) — Shell terminal, REPL, and argument runner
-  * 📂 [src/](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src) — C++ Source Implementation Files
-    * 🚀 [main.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/main.cpp) — Application entry point
-    * 🔑 [token.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/token.cpp) — Token string conversions
-    * 🔍 [lexer.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/lexer.cpp) — JavaScript character-by-character scanner logic
-    * 🗂️ [ast.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/ast.cpp) — Syntax tree node implementations
-    * 📈 [parser.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/parser.cpp) — Operator precedence climber & expression parsing logic
-    * 🌐 [environment.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/environment.cpp) — Variable lookup and block-scope initialization
-    * 💎 [value.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/value.cpp) — `JSValue` helper methods and dynamic conversions
-    * 📚 [builtins.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/builtins.cpp) — Implementations of standard library methods (e.g. array, object, string methods)
-    * ⚙️ [interpreter.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/interpreter.cpp) — AST evaluation and control-flow engine
-    * ⚠️ [errors.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/errors.cpp) — Error stack formatting
-    * 🔎 [inspect.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/inspect.cpp) — Formatter for array formatting, spacing, and quotes
-    * 🖥️ [cli.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/cli.cpp) — Interactive REPL and file execution runner
-  * 📂 [scripts/](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts) — Build & Automation Scripts
-    * 🔨 [build.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/build.sh) — Easy compiler builder script
-    * 📥 [install-local.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/install-local.sh) — User bin local installer script
-    * 📝 [run-tests.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-tests.sh) — Full validation tests runner
-    * 🏆 [run-hackathon-testcase.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-hackathon-testcase.sh) — Official hackathon evaluation runner
+* [README.md](file:///home/hariomm/Projects/jsling/README.md) — Main landing page & architecture overview
+* [INSTALL.md](file:///home/hariomm/Projects/jsling/INSTALL.md) — Detailed installation & build instructions
+* [CPP_IMPLEMENTATION.md](file:///home/hariomm/Projects/jsling/CPP_IMPLEMENTATION.md) — Detailed implementation blueprint & status checklist
+* [build-installer.bat](file:///home/hariomm/Projects/jsling/build-installer.bat) — Automated batch script to package Windows binary
+* [jsling.iss](file:///home/hariomm/Projects/jsling/jsling.iss) — Windows installer installer generator script
+* [assets/](file:///home/hariomm/Projects/jsling/assets) — Workspace icons, branding assets, and preview screenshots
+  * [jsling-preview.png](file:///home/hariomm/Projects/jsling/assets/jsling-preview.png) — Preview screen capture
+  * [jsling.svg](file:///home/hariomm/Projects/jsling/assets/jsling.svg) — Vector logo designed for the project
+* [COMPILER_CPP/](file:///home/hariomm/Projects/jsling/COMPILER_CPP) — Core C++17 runtime source directory
+  * [CMakeLists.txt](file:///home/hariomm/Projects/jsling/COMPILER_CPP/CMakeLists.txt) — CMake configuration file
+  * [include/jsling/](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling) — Core C++ Header Files
+    * [token.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/token.hpp) — Token type and structure definitions
+    * [lexer.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/lexer.hpp) — Lexical analyzer declarations
+    * [ast.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/ast.hpp) — Abstract Syntax Tree node structs
+    * [parser.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/parser.hpp) — Recursive descent parser declarations
+    * [environment.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/environment.hpp) — Scope mapping and parent links
+    * [value.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/value.hpp) — Tagged union `JSValue` definition
+    * [builtins.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/builtins.hpp) — Prototypes for built-in JavaScript functions
+    * [interpreter.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/interpreter.hpp) — Evaluation visitor engine declarations
+    * [errors.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/errors.hpp) — Internal signal & error representation
+    * [inspect.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/inspect.hpp) — Node.js-compatible value formatter declarations
+    * [cli.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/cli.hpp) — Shell terminal, REPL, and argument runner
+  * [src/](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src) — C++ Source Implementation Files
+    * [main.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/main.cpp) — Application entry point
+    * [token.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/token.cpp) — Token string conversions
+    * [lexer.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/lexer.cpp) — JavaScript character-by-character scanner logic
+    * [ast.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/ast.cpp) — Syntax tree node implementations
+    * [parser.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/parser.cpp) — Operator precedence climber & expression parsing logic
+    * [environment.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/environment.cpp) — Variable lookup and block-scope initialization
+    * [value.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/value.cpp) — `JSValue` helper methods and dynamic conversions
+    * [builtins.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/builtins.cpp) — Implementations of standard library methods (e.g. array, object, string methods)
+    * [interpreter.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/interpreter.cpp) — AST evaluation and control-flow engine
+    * [errors.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/errors.cpp) — Error stack formatting
+    * [inspect.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/inspect.cpp) — Formatter for array formatting, spacing, and quotes
+    * [cli.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/cli.cpp) — Interactive REPL and file execution runner
+  * [scripts/](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts) — Build & Automation Scripts
+    * [build.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/build.sh) — Easy compiler builder script
+    * [install-local.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/install-local.sh) — User bin local installer script
+    * [run-tests.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-tests.sh) — Full validation tests runner
+    * [run-hackathon-testcase.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-hackathon-testcase.sh) — Official hackathon evaluation runner
 
 ---
 
-## 📈 Status
+## Status
 
-The core interpreter is **complete and fully operational** (Phases 1–4). Advanced ES6+ features like arrow functions, template literals, rest/spread parameters, and the `in` operator are fully supported. 
+The core interpreter is **complete and fully operational** (Phases 1–8). Advanced ES6+ features like arrow functions, template literals, rest/spread parameters, object and array destructuring patterns, object shorthand/computed properties, var hoisting, and the `in` operator are fully supported.
 
-Planned roadmap features include destructuring assignment, `try/catch` exception blocks, classes, `for...of` statements, and full prototype chains.
+The runtime also features a robust, Node.js-compatible interactive REPL supporting multiline balanced inputs, ANSI-colored value inspection, and a helpful error reporting engine with caret traceback and spellcheck suggestions.
+
+Planned roadmap features include `try/catch` exception blocks, classes, `for...of`/`for...in` statements, and full prototype chains.
 
 For the detailed status of every single language construct, please review [CPP_IMPLEMENTATION.md](file:///home/hariomm/Projects/jsling/CPP_IMPLEMENTATION.md).
 
