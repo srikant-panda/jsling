@@ -9,14 +9,14 @@ REM Capture CR character for CRLF stripping
 for /f %%a in ('copy /Z "%~f0" nul') do set "CR=%%a"
 
 REM --- ANSI colors (Windows 10+ Terminal) ---
-for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
-set "RED=%ESC%[0;31m"
-set "GREEN=%ESC%[0;32m"
-set "YELLOW=%ESC%[1;33m"
-set "CYAN=%ESC%[0;36m"
-set "BOLD=%ESC%[1m"
-set "DIM=%ESC%[2m"
-set "RESET=%ESC%[0m"
+for /F "delims=#" %%E in ('"prompt #$E# & for %%a in (1) do rem"') do set "ESC=%%E"
+set "RED=!ESC![0;31m"
+set "GREEN=!ESC![0;32m"
+set "YELLOW=!ESC![1;33m"
+set "CYAN=!ESC![0;36m"
+set "BOLD=!ESC![1m"
+set "DIM=!ESC![2m"
+set "RESET=!ESC![0m"
 
 set "SCRIPT_DIR=%~dp0"
 pushd "%SCRIPT_DIR%.."
