@@ -12,7 +12,13 @@ set "SCRIPT_DIR=%~dp0"
 set "PROJECT_DIR=%SCRIPT_DIR%.."
 set "BUILD_DIR=%PROJECT_DIR%\build"
 set "TEST_DIR=%PROJECT_DIR%\tests\hackathon_testcase"
-set "BINARY=%BUILD_DIR%\jsling.exe"
+
+REM Look for binary: prefer bin\ (shipped), then build\ (dev)
+if exist "%PROJECT_DIR%\..\bin\jsling.exe" (
+    set "BINARY=%PROJECT_DIR%\..\bin\jsling.exe"
+) else (
+    set "BINARY=%BUILD_DIR%\jsling.exe"
+)
 
 set /a PASS=0
 set /a FAIL=0
@@ -37,28 +43,44 @@ set "FILE3=tc3_armstrong"
 set "FILE4=tc4_array_reverse"
 set "FILE5=tc5_palindrome"
 
-REM --- Build if needed (MinGW) ---
+REM --- Build if needed (auto-detect toolchain) ---
 if not exist "%BINARY%" (
-    echo [!] Binary not found, building with MinGW...
+    echo [!] Binary not found, building...
     if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
-    cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -S "%PROJECT_DIR%" -B "%BUILD_DIR%" >nul 2>&1
-    if !ERRORLEVEL! neq 0 (
-        echo [error] CMake configure failed. Make sure MinGW is in your PATH.
-        exit /b 1
-    )
+
+    REM Detect available make tool
+    set "AUTO_GEN="
+    set "AUTO_MAKE="
     where mingw32-make >nul 2>&1
     if !ERRORLEVEL! equ 0 (
-        mingw32-make -C "%BUILD_DIR%" -j%NUMBER_OF_PROCESSORS% >nul 2>&1
+        set "AUTO_GEN=-G MinGW Makefiles"
+        set "AUTO_MAKE=mingw32-make"
     ) else (
         where make >nul 2>&1
         if !ERRORLEVEL! equ 0 (
-            make -C "%BUILD_DIR%" -j%NUMBER_OF_PROCESSORS% >nul 2>&1
-        ) else (
-            cmake --build "%BUILD_DIR%" -j%NUMBER_OF_PROCESSORS% >nul 2>&1
+            set "AUTO_GEN=-G MinGW Makefiles"
+            set "AUTO_MAKE=make"
         )
     )
+
+    if defined AUTO_GEN (
+        cmake !AUTO_GEN! -DCMAKE_BUILD_TYPE=Release -S "%PROJECT_DIR%" -B "%BUILD_DIR%" >nul 2>&1
+    ) else (
+        cmake -DCMAKE_BUILD_TYPE=Release -S "%PROJECT_DIR%" -B "%BUILD_DIR%" >nul 2>&1
+    )
+    if !ERRORLEVEL! neq 0 (
+        echo [error] CMake configure failed. Make sure gcc/g++ is in your PATH.
+        exit /b 1
+    )
+
+    if defined AUTO_MAKE (
+        !AUTO_MAKE! -C "%BUILD_DIR%" -j%NUMBER_OF_PROCESSORS% >nul 2>&1
+    ) else (
+        cmake --build "%BUILD_DIR%" -j%NUMBER_OF_PROCESSORS% >nul 2>&1
+    )
+
     if not exist "%BINARY%" (
-        echo [error] Build failed. Make sure MinGW is in your PATH.
+        echo [error] Build failed. Make sure a C++ compiler is in your PATH.
         exit /b 1
     )
     echo [ok] Build complete
