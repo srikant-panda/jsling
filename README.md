@@ -50,6 +50,10 @@ bin\jsling.exe your_testcase.js
 
 Output is printed to stdout, matching Node.js `console.log` formatting.
 
+> **Note:** The prebuilt `bin\jsling.exe` is provided because building from source
+> requires MinGW-w64 (not standard MinGW) + CMake, which may not be available
+> on all machines. The binary is compiled directly from the source in this repo.
+
 ### Interactive Menu
 
 Double-click `run.bat` at the project root for a menu with demo script, hackathon tests, full test suite, REPL, and inline eval.
