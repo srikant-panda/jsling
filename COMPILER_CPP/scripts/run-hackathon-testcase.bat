@@ -23,7 +23,12 @@ pushd "%SCRIPT_DIR%.."
 set "PROJECT_DIR=%CD%"
 popd
 set "BUILD_DIR=%PROJECT_DIR%\build"
-set "TEST_DIR=%PROJECT_DIR%\tests\hackathon_testcase"
+REM Prefer hackathon_testcase, fallback to hackathon
+if exist "%PROJECT_DIR%\tests\hackathon_testcase" (
+    set "TEST_DIR=%PROJECT_DIR%\tests\hackathon_testcase"
+) else (
+    set "TEST_DIR=%PROJECT_DIR%\tests\hackathon"
+)
 
 REM Resolve repo root for bin\ lookup
 pushd "%PROJECT_DIR%\.."
