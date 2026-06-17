@@ -99,11 +99,22 @@ bash scripts/build.sh
 ---
 
 **Windows (MinGW):**
-```cmd
-git clone https://github.com/srikant-panda/jsling.git
-cd jsling\COMPILER_CPP
-scripts\build.bat
+### Build on Windows (MSYS2 + MinGW-w64)
+
+1. Install [MSYS2](https://www.msys2.org/)
+2. Open **MSYS2 MINGW64** terminal and run:
+```bash
+   pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-make
 ```
+3. Add `C:\msys64\mingw64\bin` to your Windows PATH
+4. In PowerShell/cmd:
+```powershell
+   cd COMPILER_CPP
+   mkdir build-win && cd build-win
+   cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=C:/msys64/mingw64/bin/g++.exe
+   mingw32-make -j4
+```
+5. Output: `build-win\jsling.exe`
 
 **Prerequisites:**
 | Tool | Minimum Version | Notes |
