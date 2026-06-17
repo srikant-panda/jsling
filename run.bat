@@ -107,3 +107,4 @@ pause
 goto :done
 
 :done
+pause

@@ -12,14 +12,35 @@
 <p align="center">
   <a href="https://en.cppreference.com/w/cpp/compiler_support/17"><img src="https://img.shields.io/badge/C%2B%2B-17-blue.svg?logo=cplusplus" alt="C++17"></a>
   <a href="COMPILER_CPP/tests/hackathon_testcase/"><img src="https://img.shields.io/badge/Score-100%2F100-success.svg" alt="Hackathon Score"></a>
-  <a href="https://github.com/srikant-panda/jsling/releases"><img src="https://img.shields.io/badge/Release-v1.0.0-orange.svg" alt="Release"></a>
+  <a href="https://jsling-website-five.vercel.app/#downloads"><img src="https://img.shields.io/badge/Download-v1.0.0-orange.svg" alt="Download"></a>
 </p>
+
+---
+
+`jsling` lexes, parses, and interprets JavaScript source code using a tree-walking interpreter, supporting a wide subset of ES6+ features. Designed to match Node.js behavior, output formatting, CLI flags, interactive REPL, and diagnostic error reporting.
+
+## Table of Contents
+
+- [For Hackathon Judges](#for-hackathon-judges)
+- [Quick Start](#quick-start)
+  - [Build](#build)
+  - [Run](#run)
+  - [Try It Out](#try-it-out)
+- [Key Features](#key-features)
+- [Installation](#installation)
+- [Architecture](#architecture)
+- [Testing](#testing)
+- [Project Structure](#project-structure)
+- [Known Limitations & Issues](#known-limitations--issues)
+- [Status](#status)
 
 ---
 
 ## For Hackathon Judges
 
-**Zero setup required.** The pre-built binary is shipped at `bin\jsling.exe`. No build tools, no MinGW, no Visual Studio, no PATH changes needed.
+> **Windows only** — The pre-built `bin\jsling.exe` and `run.bat` launcher target Windows. For Linux/macOS, see [Quick Start](#quick-start) to build from source.
+
+**Zero setup required.** The pre-built binary is shipped at `bin\jsling.exe`. No build tools, no MinGW, no Visual Studio needed.
 
 ### Running any JavaScript file
 
@@ -29,22 +50,9 @@ bin\jsling.exe your_testcase.js
 
 Output is printed to stdout, matching Node.js `console.log` formatting.
 
-### Usage
-
-```cmd
-REM Run a .js file
-bin\jsling.exe test.js
-
-REM Evaluate an inline expression
-bin\jsling.exe -e "console.log(1 + 2)"
-
-REM Start the interactive REPL
-bin\jsling.exe
-```
-
 ### Interactive Menu
 
-Double-click `run.bat` at the project root for a menu with demo script, hackathon test suite, full test suite, REPL, and inline eval.
+Double-click `run.bat` at the project root for a menu with demo script, hackathon tests, full test suite, REPL, and inline eval.
 
 ### Official Hackathon Test Suite
 
@@ -54,28 +62,39 @@ COMPILER_CPP\scripts\run-hackathon-testcase.bat
 
 Runs 5 test cases (20 pts each = 100 pts total) with verbose output showing source code, actual vs expected, and pass/fail status.
 
----
+| TC | Test Case | JS Concepts Tested | Points | Status |
+|----|-----------|-------------------|--------|--------|
+| TC-1 | Odd / Even Checker | `if/else`, modulo `%`, string concat `+` | 20 | Pass |
+| TC-2 | Triangle Pattern | Nested `for` loops, string `+=`, `console.log` | 20 | Pass |
+| TC-3 | Armstrong Number | `while` loop, `**` exponent, `Math.floor`, functions | 20 | Pass |
+| TC-4 | Array Reverse | Spread `[...arr]`, `.reverse()`, `.join(", ")` | 20 | Pass |
+| TC-5 | String Palindrome | `.split("")`, `.reverse()`, `.join("")`, `===` | 20 | Pass |
 
-`jsling` lexes, parses, and interprets JavaScript source code using a tree-walking interpreter, supporting a wide subset of ES6+ features. Designed to match Node.js behavior, output formatting, CLI flags, interactive REPL behavior, and diagnostic error reporting.
+Test files are in [COMPILER_CPP/tests/hackathon_testcase/](COMPILER_CPP/tests/hackathon_testcase/).
 
 ---
 
 ## Quick Start
 
-### Linux / macOS
+### Build
 
+**Linux / macOS:**
 ```bash
 git clone https://github.com/srikant-panda/jsling.git
 cd jsling/COMPILER_CPP
 bash scripts/build.sh
 ```
 
-**Prerequisites:** `gcc`/`g++` (C++17), `cmake`, `make`
+**Prerequisites:**
+| Tool | Minimum Version | Notes |
+|------|-----------------|-------|
+| `gcc` / `g++` | **7.0+** | Required for C++17 `<variant>` header support |
+| `cmake` | **3.10+** | For C++17 project configuration |
+| `make` | **4.0+** | GNU Make (standard on Linux/macOS) |
 
-### Windows (MinGW)
+---
 
-Open any **Command Prompt** or **PowerShell** with MinGW on your PATH:
-
+**Windows (MinGW):**
 ```cmd
 git clone https://github.com/srikant-panda/jsling.git
 cd jsling\COMPILER_CPP
@@ -83,18 +102,20 @@ scripts\build.bat
 ```
 
 **Prerequisites:**
-- [MinGW-w64](https://www.mingw-w64.org/) (`gcc`, `g++`, `mingw32-make`) on PATH
-- [CMake](https://cmake.org/download/) on PATH
-- No Visual Studio or Developer Command Prompt needed
+| Tool | Minimum Version | Notes |
+|------|-----------------|-------|
+| [MinGW-w64](https://www.mingw-w64.org/) | **GCC 7.0+** | Includes `gcc`, `g++`, and `mingw32-make` |
+| [CMake](https://cmake.org/download/) | **3.10+** | Must be on PATH |
 
-The build script uses `cmake -G "MinGW Makefiles"` and `mingw32-make` automatically.
+> **Important:** MinGW distributions with GCC < 7 (e.g., older MinGW.org releases) will fail with `fatal error: variant: No such file or directory`. Use [MSYS2](https://www.msys2.org/) or a recent MinGW-w64 build.
 
-### Windows (Visual Studio)
+No Visual Studio or Developer Command Prompt needed — `build.bat` auto-detects MinGW.
 
-Open **Developer Command Prompt for VS 2022+**:
+---
 
+**Windows (Visual Studio):**
+Open Developer Command Prompt for VS 2019+:
 ```cmd
-git clone https://github.com/srikant-panda/jsling.git
 cd jsling\COMPILER_CPP
 mkdir build && cd build
 cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
@@ -102,45 +123,34 @@ nmake
 ```
 
 **Prerequisites:**
-- Visual Studio Build Tools (with "Desktop development with C++")
-- [CMake](https://cmake.org/download/)
+| Tool | Minimum Version | Notes |
+|------|-----------------|-------|
+| Visual Studio Build Tools | **2019+** | With "Desktop development with C++" workload |
+| [CMake](https://cmake.org/download/) | **3.10+** | Included with VS Build Tools |
 
-> [!TIP]
-> Alternatively, download the precompiled GUI installer `JSling-Setup.exe` from the [releases page](https://github.com/srikant-panda/jsling/releases) to install system-wide in one click.
+> **Note:** NMake Makefiles generator requires the Developer Command Prompt. Regular CMD/PowerShell will fail with `nmake: command not found`.
 
----
+> **Tip:** Download the precompiled GUI installer from [jsling-website-five.vercel.app/#downloads](https://jsling-website-five.vercel.app/#downloads) for one-click system-wide install.
 
-## Run It
+### Run
 
 **Linux / macOS:**
 ```bash
-# Run a script file
-./build/jsling script.js
-
-# Evaluate an expression directly
-./build/jsling -e "console.log(1 + 2)"
-
-# Start the interactive REPL
-./build/jsling
+./build/jsling script.js              # Run a script
+./build/jsling -e "console.log(42)"   # Evaluate expression
+./build/jsling                        # Start REPL
 ```
 
 **Windows:**
 ```cmd
-REM Run a script file
-build\jsling.exe script.js
-
-REM Evaluate an expression directly
-build\jsling.exe -e "console.log(1 + 2)"
-
-REM Start the interactive REPL
-build\jsling.exe
+build\jsling.exe script.js            # Run a script
+build\jsling.exe -e "console.log(42)" # Evaluate expression
+build\jsling.exe                      # Start REPL
 ```
 
----
+### Try It Out
 
-## Try It Out
-
-Create a file named `demo.js`:
+Create a `demo.js`:
 
 ```javascript
 // Template literals
@@ -171,25 +181,69 @@ let person = { name: "JSling", version: "1.0.0" };
 console.log(`Running ${person.name} v${person.version}`);
 ```
 
-Run it with:
-
-**Linux / macOS:**
+Run it:
 ```bash
-./build/jsling demo.js
-```
-
-**Windows:**
-```cmd
-build\jsling.exe demo.js
+./build/jsling demo.js        # Linux/macOS
+build\jsling.exe demo.js      # Windows
 ```
 
 ---
 
-## Architecture & Execution Pipeline
+## Key Features
 
-`jsling` uses a classic interpreter design consisting of a Lexer, a Parser (Recursive Descent with Precedence Climbing), an AST representation, and a Tree-Walking Interpreter backed by a Lexical Environment chain.
+### Language Constructs
 
-### 🔄 The Execution Flow
+| Category | Supported Features |
+|---|---|
+| **Variables** | `let` & `const` (block-scoped), `var` (function-scoped with hoisting), destructuring with rest/default |
+| **Functions** | First-class, closures, recursion, arrow functions (`x => x * 2`), default parameters, named function expressions |
+| **Parameters** | Rest (`...args`), spread (`f(...arr)`), parameter destructuring |
+| **Control Flow** | `if/else`, `for`, `while`, `do-while`, `switch-case`, `break`, `continue`, `return` |
+| **Operators** | Logical, comparison, bitwise, postfix/prefix (`++`, `--`), ternary (`?:`) |
+| **Template Strings** | Full template literals with nested evaluation |
+| **Objects** | Property shorthand, computed keys, shorthand methods |
+
+### Standard Library
+
+| Namespace | Methods |
+|---|---|
+| **Globals** | `console.log`, `parseInt`, `parseFloat`, `Date` |
+| **Math** | `floor`, `ceil`, `random`, `abs`, `pow`, `sqrt`, `sin`, `cos`, and more |
+| **Array** | `map`, `filter`, `reduce`, `forEach`, `find`, `some`, `every`, `sort`, `splice`, `slice`, `join`, `includes`, `indexOf`, `push`, `pop`, `shift`, `unshift`, `reverse`, `concat` |
+| **String** | `split`, `slice`, `includes`, `indexOf`, `replace`, `replaceAll`, `trim`, `toUpperCase`, `toLowerCase`, `startsWith`, `endsWith`, `repeat`, `padStart`, `padEnd`, `charAt`, `substring`, `concat` |
+| **Number** | `toFixed`, `toString(radix)` |
+| **Object** | `keys`, `values`, `entries`, `assign`, `freeze` |
+
+### REPL & Diagnostics
+
+| Feature | Description |
+|---|---|
+| **Multiline REPL** | Automatically defers execution until all `{`, `(`, `[` are matched |
+| **Node.js-style** | Prints non-`undefined` expression results |
+| **Colorized output** | ANSI-colored arrays, objects, functions, dates, and primitives |
+| **Error tracebacks** | `TypeError`, `ReferenceError`, `SyntaxError`, `RangeError` with caret source lines |
+| **Typo suggestions** | "Did you mean '...'?" using Levenshtein distance |
+
+---
+
+## Installation
+
+For quick setup, see [Quick Start](#quick-start) above. For full details, see [INSTALL.md](INSTALL.md).
+
+**Linux / macOS:**
+```bash
+cd COMPILER_CPP
+bash scripts/install-local.sh    # Installs to /usr/local/bin or ~/.local/bin
+```
+
+**Windows:**
+Add `COMPILER_CPP\build` to your system PATH, or download the GUI installer from [jsling-website-five.vercel.app/#downloads](https://jsling-website-five.vercel.app/#downloads).
+
+---
+
+## Architecture
+
+`jsling` uses a classic interpreter design: Lexer, Parser (Recursive Descent with Precedence Climbing), AST, and Tree-Walking Interpreter backed by a Lexical Environment chain.
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#1e1e3f', 'edgeLabelBackground':'#1a1a2e', 'tertiaryColor': '#1a1a2e'}}}%%
@@ -217,7 +271,6 @@ flowchart TD
         K -->|Node.js-compliant formatting| L["stdout / console.log"]
     end
 
-    %% Style classes
     classDef layer fill:#1e1e38,stroke:#3b4252,stroke-width:1px,color:#eceff4;
     classDef component fill:#0f0f23,stroke:#e94560,stroke-width:2px,color:#fff;
     classDef data fill:#1e1e24,stroke:#f5a623,stroke-width:1px,color:#f5a623;
@@ -229,24 +282,9 @@ flowchart TD
     class L final;
 ```
 
-### 🔬 Detailed Pipeline Walkthrough
-To understand how code executes in `jsling`, let's trace the variable declaration and binary expression statement:
-```javascript
-let x = 10 + 5;
-```
+### JSValue Type System
 
-| Step | Component | File | Representation / Output |
-|---|---|---|---|
-| **1** | **Lexer** | [lexer.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/lexer.cpp) | Generates a sequence of tokens from the raw input string:<br>`LET("let")` → `IDENTIFIER("x")` → `ASSIGN("=")` → `NUMBER("10")` → `PLUS("+")` → `NUMBER("5")` → `SEMICOLON(";")` |
-| **2** | **Parser** | [parser.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/parser.cpp) | Builds the AST. Parses the addition using **Precedence Climbing** and wraps it in a variable declaration:<br>`VarDecl { id: "x", init: BinaryExpr(op: "+", left: Literal(10), right: Literal(5)) }` |
-| **3** | **Interpreter** | [interpreter.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/interpreter.cpp) | Evaluates the AST nodes by walking the tree:<br>1. Evaluates the `BinaryExpr`: calls `+` on numbers `10` and `5` using standard C++ float math.<br>2. Produces a `JSValue` of type `double` containing `15.0`. |
-| **4** | **Environment** | [environment.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/environment.cpp) | Resolves the binding: maps name `"x"` to `JSValue(15.0)` in the local lexical scope context. |
-
----
-
-### 💾 `JSValue` Type System Architecture
-
-Since JavaScript is dynamically typed, we represent all JavaScript values in C++ using a variant-based tagged union called `JSValue` ([value.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/value.hpp)).
+All JavaScript values are represented in C++17 as a `std::variant` tagged union ([value.hpp](COMPILER_CPP/include/jsling/value.hpp)):
 
 ```mermaid
 classDiagram
@@ -259,15 +297,9 @@ classDiagram
         +isArray() bool
         +isObject() bool
         +isFunction() bool
-        +asNumber() double
-        +asString() string
-        +asArray() JSArray
-        +asObject() JSObjectPtr
     }
-    class JSNull {
-    }
-    class JSUndefined {
-    }
+    class JSNull
+    class JSUndefined
     class JSObject {
         +unordered_map properties
     }
@@ -280,90 +312,72 @@ classDiagram
         +function callback
     }
 
-    JSValue *-- JSNull
-    JSValue *-- JSUndefined
-    JSValue *-- JSObject
-    JSValue *-- JSFunction
-    JSValue *-- JSNativeFunction
+    JSValue *-- JSNull : null
+    JSValue *-- JSUndefined : undefined
+    JSValue *-- "bool" : boolean
+    JSValue *-- "double" : number
+    JSValue *-- "string" : string
+    JSValue *-- JSObject : Object
+    JSValue *-- JSFunction : Function
+    JSValue *-- JSNativeFunction : Native
 ```
 
-#### Mapping JS Types to C++17 Types
-The inner variant handles data storage natively:
-* **`null`** ➔ `jsling::JSNull`
-* **`undefined`** ➔ `jsling::JSUndefined`
-* **`boolean`** ➔ `bool`
-* **`number`** ➔ `double`
-* **`string`** ➔ `std::string`
-* **`Array`** ➔ `std::vector<JSValue>` (aliased as `JSArray`)
-* **`Object`** ➔ `std::shared_ptr<JSObject>`
-* **`Function`** ➔ `std::shared_ptr<JSFunction>`
-* **`Native Function`** ➔ `std::shared_ptr<JSNativeFunction>`
+### Scope Resolution
 
----
-
-### 🌐 Scope & Environment Resolution
-
-Scoping in `jsling` is lexical. Functions capture the environment in which they are defined, enabling closures. The scope resolution forms a linked chain of environments ([environment.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/environment.hpp)):
+Functions capture the environment where they are defined. Variable lookup traverses parent scopes until found:
 
 ```mermaid
 flowchart RL
-    subgraph EnvironmentChain [Lexical Scope Chain]
-        LocalEnv2["<b>Inner Local Scope (Closure)</b><br>• Parent: LocalEnv1<br>• Bindings: { y: 20 }"] 
-        --> LocalEnv1["<b>Outer Local Scope (Function)</b><br>• Parent: GlobalEnv<br>• Bindings: { x: 10, inner: JSFunction }"]
-        --> GlobalEnv["<b>Global Scope</b><br>• Parent: nullptr<br>• Bindings: { console, Math, Date, ... }"]
-    end
+    LocalScope["<b>Inner Scope</b><br>Bindings: y = 20"]
+    -->|not found?| FunctionScope["<b>Function Scope</b><br>Bindings: x = 10"]
+    -->|not found?| GlobalScope["<b>Global Scope</b><br>console, Math, Date, ..."]
+    -->|not found?| Error["<b>ReferenceError</b>"]
 ```
-When looking up a variable:
-1. Check current scope.
-2. If not found, traverse up the parent link until reaching the **Global Scope**.
-3. If still not found, throw a `ReferenceError` exception via [errors.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/errors.hpp).
+
+### Feature Coverage
+
+```mermaid
+mindmap
+  root((jsling))
+    Variables
+      let / const
+      var + hoisting
+      Destructuring
+    Functions
+      Arrow functions
+      Closures
+      Recursion
+      Rest / Spread
+    Control Flow
+      if / else
+      for / while
+      switch / case
+      do-while
+    Operators
+      Logical
+      Bitwise
+      Ternary
+    Strings
+      Template literals
+      String methods
+    Objects
+      Property shorthand
+      Computed keys
+      Shorthand methods
+    Standard Library
+      Array methods
+      Math
+      console
+      Object
+```
 
 ---
 
-## Key Features & Language Support
+## Testing
 
-`jsling` provides robust support for a substantial subset of ES6+ syntax and built-in prototypes:
+### Hackathon Evaluation Suite
 
-### Language Constructs
-
-| Category | Supported Features & Syntax |
-|---|---|
-| **Variables & Binding** | `let` & `const` (block-scoped), `var` (function-scoped) with hoisting, comma-separated declarations (e.g., `let a = 1, b = 2`), and **array/object destructuring** with rest/default values (e.g., `const {x, y: z = 10} = obj`) |
-| **Functions** | First-class functions, closures, recursion, lexical scope, arrow functions (`x => x * 2`), and default parameters |
-| **Parameters & Spread** | Rest parameters (`function f(...args)`), spread arguments (`f(...arr)`), array/object spread (`[...a, ...b]`, `{...obj, z: 3}`), and **parameter destructuring** |
-| **Control Flow** | `if-else`, loops (`for`, `while`, `do-while`), `switch-case`, control flow statements (`break`, `continue`, `return`) |
-| **Operators** | Logical (`&&`, `||`, `!`), comparison (`==`, `===`, `!=`, `!==`, `<`, `>`, `<=`, `>=`), bitwise (`&`, `\|`, `^`, `<<`, `>>`, `>>>`), postfix/prefix (`++`, `--`), and ternary (`? :`) |
-| **Template Strings** | Full template literals (`` `Hello ${name}!` ``) with support for nested evaluation |
-| **Object Literals** | Property shorthand (`{x}`), computed property keys (e.g., `{[expr]: value}`), and shorthand method definitions (`method() {}`) |
-
-### Standard Library & Built-ins
-
-| Namespace / Class | Supported Methods |
-|---|---|
-|  **Globals & I/O** | `console.log`, `parseInt`, `parseFloat`, `Date` |
-|  **Math** | All core properties & methods: `Math.floor`, `Math.ceil`, `Math.random`, `Math.abs`, `Math.pow`, `Math.sqrt`, `Math.sin`, `Math.cos`, etc. |
-|  **Array** | `.map()`, `.filter()`, `.reduce()`, `.forEach()`, `.find()`, `.some()`, `.every()`, `.sort()`, `.splice()`, `.slice()`, `.join()`, `.includes()`, `.indexOf()`, `.push()`, `.pop()`, `.shift()`, `.unshift()`, `.reverse()`, `.concat()` |
-|  **String** | `.split()`, `.slice()`, `.includes()`, `.indexOf()`, `.replace()`, `.replaceAll()`, `.trim()`, `.toUpperCase()`, `.toLowerCase()`, `.startsWith()`, `.endsWith()`, `.repeat()`, `.padStart()`, `.padEnd()`, `.charAt()`, `.substring()`, `.concat()` |
-|  **Number** | `.toFixed()`, `.toString(radix)` |
-|  **Object** | `Object.keys()`, `Object.values()`, `Object.entries()`, `Object.assign()`, `Object.freeze()` |
-
-### Interactive REPL & Error Diagnostics
-
-| Feature | Capabilities |
-|---|---|
-| **Brace-Balancing** | Multiline REPL inputs automatically defer execution until all open `{`, `(`, and `[` braces are matched. |
-| **Node.js-style REPL** | Direct expression evaluation feedback; automatically prints non-`undefined` statement/expression outputs. |
-| **Colorized Inspection** | ANSI-colored terminal printer formatting arrays, objects, functions, dates, and primitives with depth tracking. |
-| **Diagnostic Tracebacks** | Standard JS error categorization (`TypeError`, `ReferenceError`, `SyntaxError`, `RangeError`) with formatted carets and source lines. |
-| **Typo Auto-Suggestions** | Auto-suggestion spellchecks (`Did you mean '...'?`) using Levenshtein distance against environment scope variables and keyword sets. |
-
----
-
-## Hackathon Evaluation Test Cases
-
-**5 test cases x 20 points = 100 points total**
-
-Run the official hackathon evaluation test suite with full verbose output (source code, actual vs expected, pass/fail per test):
+5 test cases x 20 points = 100 points total. Verbose output shows source code, actual vs expected, and pass/fail per test.
 
 **Linux / macOS:**
 ```bash
@@ -371,122 +385,15 @@ cd COMPILER_CPP
 bash scripts/run-hackathon-testcase.sh
 ```
 
-**Windows (MinGW):**
+**Windows:**
 ```cmd
 cd COMPILER_CPP
 scripts\run-hackathon-testcase.bat
 ```
 
-The `.bat` runner auto-builds with MinGW if the binary is not found.
-
-### Test Case Overview
-
-| TC | Test Case | JS Concepts Tested | Points | Status |
-|----|-----------|-------------------|--------|--------|
-| TC-1 | Odd / Even Checker | `if/else`, modulo `%`, string concat `+` | 20 | ✅ Pass |
-| TC-2 | Triangle Pattern | Nested `for` loops, string `+=`, `console.log` | 20 | ✅ Pass |
-| TC-3 | Armstrong Number | `while` loop, `**` exponent, `Math.floor`, functions | 20 | ✅ Pass |
-| TC-4 | Array Reverse | Spread `[...arr]`, `.reverse()`, `.join(", ")` | 20 | ✅ Pass |
-| TC-5 | String Palindrome | `.split("")`, `.reverse()`, `.join("")`, `===` | 20 | ✅ Pass |
-
-### 📋 Test Case Specifications
-
-<details>
-<summary><b>TC-1: Odd / Even Checker</b> (20 Points)</summary>
-
-```javascript
-let num = 7;
-if (num % 2 === 0) {
-    console.log(num + " is Even");
-} else {
-    console.log(num + " is Odd");
-}
-// Expected Output: 7 is Odd
-```
-</details>
-
-<details>
-<summary><b>TC-2: Triangle Pattern</b> (20 Points)</summary>
-
-```javascript
-for (let i = 1; i <= 5; i++) {
-    let row = "";
-    for (let j = 1; j <= i; j++) {
-        row += "*";
-    }
-    console.log(row);
-}
-// Expected Output:
-// *
-// **
-// ***
-// ****
-// *****
-```
-</details>
-
-<details>
-<summary><b>TC-3: Armstrong Number Checker</b> (20 Points)</summary>
-
-```javascript
-function isArmstrong(num) {
-    let temp = num;
-    let sum = 0;
-    while (temp > 0) {
-        let digit = temp % 10;
-        sum += digit ** 3;
-        temp = Math.floor(temp / 10);
-    }
-    return sum === num;
-}
-console.log(isArmstrong(153));  // Expected: true
-console.log(isArmstrong(123));  // Expected: false
-```
-</details>
-
-<details>
-<summary><b>TC-4: Array Reverse via Spread</b> (20 Points)</summary>
-
-```javascript
-let arr = [1, 2, 3, 4, 5];
-let reversed = [...arr].reverse();
-console.log("Original: " + arr.join(", "));
-console.log("Reversed: " + reversed.join(", "));
-// Expected Output:
-// Original: 1, 2, 3, 4, 5
-// Reversed: 5, 4, 3, 2, 1
-```
-</details>
-
-<details>
-<summary><b>TC-5: String Palindrome Check</b> (20 Points)</summary>
-
-```javascript
-let str = "racecar";
-let reversed = str.split("").reverse().join("");
-if (str === reversed) {
-    console.log(str + " is a Palindrome");
-} else {
-    console.log(str + " is not a Palindrome");
-}
-// Expected Output: racecar is a Palindrome
-```
-</details>
-
----
-
-### Test File Structure
-
-```
-COMPILER_CPP/tests/hackathon_testcase/
-├── tc1_odd_even.js       + tc1_odd_even.expected
-├── tc2_triangle.js       + tc2_triangle.expected
-├── tc3_armstrong.js      + tc3_armstrong.expected
-├── tc4_array_reverse.js  + tc4_array_reverse.expected
-└── tc5_palindrome.js     + tc5_palindrome.expected
-```
-
 ### Full Test Suite
+
+Runs all `.js` files in `tests/` and compares output against `.expected` files.
 
 **Linux / macOS:**
 ```bash
@@ -494,96 +401,145 @@ cd COMPILER_CPP
 bash scripts/run-tests.sh
 ```
 
-**Windows (MinGW):**
+**Windows:**
 ```cmd
 cd COMPILER_CPP
 scripts\run-tests.bat
-scripts\run-tests.bat --filter basics    REM run only matching tests
+scripts\run-tests.bat --filter basics    # run only matching tests
 ```
 
-These scripts execute all `.js` files in `tests/` and automatically compare their terminal outputs against `.expected` files. The Windows `.bat` runner auto-builds with MinGW if the binary is not found.
+Both runners auto-build if the binary is not found.
+
+### Test File Structure
+
+```
+COMPILER_CPP/tests/
+├── hackathon_testcase/         # 5 official evaluation tests
+│   ├── tc1_odd_even.js         + .expected
+│   ├── tc2_triangle.js         + .expected
+│   ├── tc3_armstrong.js        + .expected
+│   ├── tc4_array_reverse.js    + .expected
+│   └── tc5_palindrome.js       + .expected
+├── test_basics.js              # Variables, types, operators
+├── test_functions.js           # Closures, HOF, recursion
+├── test_arrays.js              # Array methods
+├── test_strings.js             # String methods
+├── test_objects.js             # Object operations
+├── test_control.js             # Loops, conditionals
+├── test_builtins.js            # Math, console, globals
+├── test_float.js               # Floating-point edge cases
+├── test_arrow_spread_rest.js   # Arrow functions, spread/rest
+└── test1_closures_hof.js       # Advanced closures & HOF
+```
 
 ---
 
-## System Installation
+## Project Structure
 
-### Linux / macOS
-```bash
-cd COMPILER_CPP
-bash scripts/install-local.sh    # Installs executable to /usr/local/bin or ~/.local/bin
-```
-
-### Windows
-The `build\jsling.exe` binary produced by `scripts\build.bat` is standalone -- just add the `COMPILER_CPP\build` folder to your system `PATH`.
-
-Alternatively, use the GUI installer:
-1. Install [Inno Setup 6](https://jrsoftware.org/isdl.php)
-2. Run `build-installer.bat` from the project root to generate `JSling-Setup.exe`
-3. Distribute or run the installer for system-wide installation
+* [run.bat](run.bat) — One-click launcher for Windows (judges: double-click this)
+* [bin/](bin) — Pre-built `jsling.exe` (shipped, no build needed)
+* [INSTALL.md](INSTALL.md) — Detailed installation & build instructions
+* [CPP_IMPLEMENTATION.md](CPP_IMPLEMENTATION.md) — Implementation blueprint & status
+* [assets/](assets) — Icons, branding, and screenshots
+* [COMPILER_CPP/](COMPILER_CPP) — Core C++17 runtime
+  * [CMakeLists.txt](COMPILER_CPP/CMakeLists.txt) — CMake configuration
+  * [include/jsling/](COMPILER_CPP/include/jsling) — Header files
+    * [token.hpp](COMPILER_CPP/include/jsling/token.hpp) — Token types
+    * [lexer.hpp](COMPILER_CPP/include/jsling/lexer.hpp) — Lexer declarations
+    * [ast.hpp](COMPILER_CPP/include/jsling/ast.hpp) — AST node structs
+    * [parser.hpp](COMPILER_CPP/include/jsling/parser.hpp) — Parser declarations
+    * [environment.hpp](COMPILER_CPP/include/jsling/environment.hpp) — Scope chain
+    * [value.hpp](COMPILER_CPP/include/jsling/value.hpp) — JSValue tagged union
+    * [builtins.hpp](COMPILER_CPP/include/jsling/builtins.hpp) — Built-in prototypes
+    * [interpreter.hpp](COMPILER_CPP/include/jsling/interpreter.hpp) — Interpreter declarations
+    * [errors.hpp](COMPILER_CPP/include/jsling/errors.hpp) — Error types
+    * [inspect.hpp](COMPILER_CPP/include/jsling/inspect.hpp) — Value formatter
+    * [cli.hpp](COMPILER_CPP/include/jsling/cli.hpp) — REPL and CLI
+  * [src/](COMPILER_CPP/src) — Source implementation
+    * [main.cpp](COMPILER_CPP/src/main.cpp) — Entry point
+    * [lexer.cpp](COMPILER_CPP/src/lexer.cpp) — Tokenizer
+    * [parser.cpp](COMPILER_CPP/src/parser.cpp) — Recursive descent parser
+    * [ast.cpp](COMPILER_CPP/src/ast.cpp) — AST node implementation
+    * [interpreter.cpp](COMPILER_CPP/src/interpreter.cpp) — Tree-walking evaluator
+    * [environment.cpp](COMPILER_CPP/src/environment.cpp) — Scope resolution
+    * [value.cpp](COMPILER_CPP/src/value.cpp) — JSValue conversions
+    * [builtins.cpp](COMPILER_CPP/src/builtins.cpp) — Standard library methods
+    * [errors.cpp](COMPILER_CPP/src/errors.cpp) — Error formatting
+    * [inspect.cpp](COMPILER_CPP/src/inspect.cpp) — Output formatter
+    * [cli.cpp](COMPILER_CPP/src/cli.cpp) — REPL runner
+  * [scripts/](COMPILER_CPP/scripts) — Build & test automation
+    * [build.sh](COMPILER_CPP/scripts/build.sh) / [build.bat](COMPILER_CPP/scripts/build.bat) — Build scripts
+    * [run-tests.sh](COMPILER_CPP/scripts/run-tests.sh) / [run-tests.bat](COMPILER_CPP/scripts/run-tests.bat) — Full test runner
+    * [run-hackathon-testcase.sh](COMPILER_CPP/scripts/run-hackathon-testcase.sh) / [run-hackathon-testcase.bat](COMPILER_CPP/scripts/run-hackathon-testcase.bat) — Hackathon runner
 
 ---
 
-## Project Structure & Navigation
+## Known Limitations & Issues
 
-Below is a detailed map of the project files. Every file and folder name is a clickable link to let you explore the source code directly:
+jsling is a from-scratch JavaScript runtime built for Thunder Hackathon 2.0. It implements a substantial subset of ES6+, but intentionally omits several advanced features. This section documents what the project **cannot** do and known current issues.
 
-* [README.md](file:///home/hariomm/Projects/jsling/README.md) — Main landing page & architecture overview
-* [run.bat](file:///home/hariomm/Projects/jsling/run.bat) — One-click launcher for Windows (judges: double-click this)
-* [bin/](file:///home/hariomm/Projects/jsling/bin) — Pre-built `jsling.exe` binary (shipped with repo, no build needed)
-* [INSTALL.md](file:///home/hariomm/Projects/jsling/INSTALL.md) — Detailed installation & build instructions
-* [CPP_IMPLEMENTATION.md](file:///home/hariomm/Projects/jsling/CPP_IMPLEMENTATION.md) — Detailed implementation blueprint & status checklist
-* [build-installer.bat](file:///home/hariomm/Projects/jsling/build-installer.bat) — Automated batch script to package Windows binary
-* [jsling.iss](file:///home/hariomm/Projects/jsling/jsling.iss) — Windows installer installer generator script
-* [assets/](file:///home/hariomm/Projects/jsling/assets) — Workspace icons, branding assets, and preview screenshots
-  * [jsling-preview.png](file:///home/hariomm/Projects/jsling/assets/jsling-preview.png) — Preview screen capture
-  * [jsling.svg](file:///home/hariomm/Projects/jsling/assets/jsling.svg) — Vector logo designed for the project
-* [COMPILER_CPP/](file:///home/hariomm/Projects/jsling/COMPILER_CPP) — Core C++17 runtime source directory
-  * [CMakeLists.txt](file:///home/hariomm/Projects/jsling/COMPILER_CPP/CMakeLists.txt) — CMake configuration file
-  * [include/jsling/](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling) — Core C++ Header Files
-    * [token.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/token.hpp) — Token type and structure definitions
-    * [lexer.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/lexer.hpp) — Lexical analyzer declarations
-    * [ast.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/ast.hpp) — Abstract Syntax Tree node structs
-    * [parser.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/parser.hpp) — Recursive descent parser declarations
-    * [environment.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/environment.hpp) — Scope mapping and parent links
-    * [value.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/value.hpp) — Tagged union `JSValue` definition
-    * [builtins.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/builtins.hpp) — Prototypes for built-in JavaScript functions
-    * [interpreter.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/interpreter.hpp) — Evaluation visitor engine declarations
-    * [errors.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/errors.hpp) — Internal signal & error representation
-    * [inspect.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/inspect.hpp) — Node.js-compatible value formatter declarations
-    * [cli.hpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/include/jsling/cli.hpp) — Shell terminal, REPL, and argument runner
-  * [src/](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src) — C++ Source Implementation Files
-    * [main.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/main.cpp) — Application entry point
-    * [token.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/token.cpp) — Token string conversions
-    * [lexer.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/lexer.cpp) — JavaScript character-by-character scanner logic
-    * [ast.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/ast.cpp) — Syntax tree node implementations
-    * [parser.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/parser.cpp) — Operator precedence climber & expression parsing logic
-    * [environment.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/environment.cpp) — Variable lookup and block-scope initialization
-    * [value.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/value.cpp) — `JSValue` helper methods and dynamic conversions
-    * [builtins.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/builtins.cpp) — Implementations of standard library methods (e.g. array, object, string methods)
-    * [interpreter.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/interpreter.cpp) — AST evaluation and control-flow engine
-    * [errors.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/errors.cpp) — Error stack formatting
-    * [inspect.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/inspect.cpp) — Formatter for array formatting, spacing, and quotes
-    * [cli.cpp](file:///home/hariomm/Projects/jsling/COMPILER_CPP/src/cli.cpp) — Interactive REPL and file execution runner
-  * [scripts/](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts) — Build & Automation Scripts
-    * [build.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/build.sh) — Linux/macOS build script
-    * [build.bat](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/build.bat) — Windows MinGW build script
-    * [install-local.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/install-local.sh) — User bin local installer script
-    * [run-tests.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-tests.sh) — Linux/macOS test runner
-    * [run-tests.bat](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-tests.bat) — Windows MinGW test runner
-    * [run-hackathon-testcase.sh](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-hackathon-testcase.sh) — Linux/macOS hackathon evaluation runner
-    * [run-hackathon-testcase.bat](file:///home/hariomm/Projects/jsling/COMPILER_CPP/scripts/run-hackathon-testcase.bat) — Windows MinGW hackathon evaluation runner
+### Unsupported Language Features
+
+The following JavaScript constructs are **not yet implemented** and will produce `SyntaxError` or runtime errors:
+
+| Category | Unsupported Features |
+|----------|----------------------|
+| **Exception Handling** | `try`, `catch`, `finally`, `throw` statements |
+| **Classes** | `class` declarations, `extends` inheritance, `super()`, static methods, getters/setters |
+| **Iteration** | `for...of` (iterables), `for...in` (enumerables) |
+| **Async** | `async`/`await`, `Promise`, `setTimeout`, `setInterval` |
+| **Modules** | `import`, `export`, ES modules |
+| **Advanced Types** | `Symbol`, `Map`, `Set`, `WeakMap`, `WeakSet`, `Proxy`, `Reflect` |
+| **Generators** | `function*`, `yield`, generator protocols |
+| **Regular Expressions** | `RegExp` literals, `.match()`, `.test()`, `.replace()` with regex |
+| **Other** | `eval()`, `with` statement, tagged template literals, decorators |
+
+### Partial or Incomplete Implementations
+
+| Feature | Current Status | Limitation |
+|---------|----------------|------------|
+| **Prototype Chains** | Basic `__proto__` link exists | Full prototype delegation and `instanceof` not complete |
+| **Destructuring** | Array/object destructuring works | Nested destructuring edge cases may fail |
+| **Template Literals** | `${expression}` interpolation works | Tagged templates not supported |
+| **Computed Properties** | `{[expr]: value}` works | Computed method names in classes not supported (classes not implemented) |
+
+### Known Bugs & Edge Cases
+
+| Issue | Description | Severity |
+|-------|-------------|----------|
+| **Floating-point precision** | Some edge cases may differ from Node.js (e.g., `0.1 + 0.2` display) | Low |
+| **Windows MinGW GCC < 7** | Older MinGW distributions fail with `fatal error: variant: No such file or directory` | Medium — use MSYS2 or MinGW-w64 with GCC 7+ |
+| **NMake environment** | `cmake -G "NMake Makefiles"` requires Developer Command Prompt; regular CMD/PowerShell fails with `nmake: command not found` | Medium — use MinGW build instead |
+| **CRLF line endings** | Windows `.bat` test runners previously had comparison issues (now fixed with PowerShell normalization) | Fixed |
+| **Deeply nested closures** | Extremely deep closure chains (>1000 levels) may cause stack overflow | Low |
+
+### What This Project Is NOT
+
+- **Not a replacement for Node.js** — jsling is a learning/hackathon project, not production-ready
+- **Not V8/QuickJS** — no JIT compilation, no bytecode, pure tree-walking interpreter (slower)
+- **Not ES6-compliant** — implements a subset, not the full ECMAScript specification
+- **Not async-capable** — no event loop, no promises, no `async`/`await`
+
+### Test Skips
+
+Two tests in the full suite are intentionally skipped:
+
+| Test File | Skip Reason |
+|-----------|-------------|
+| `test2_destructuring_spread.js` | Advanced destructuring, template expressions, computed properties pending |
+| `test4_classes_errors.js` | Class syntax not yet implemented |
 
 ---
 
 ## Status
 
-The core interpreter is **complete and fully operational** (Phases 1–8). Advanced ES6+ features like arrow functions, template literals, rest/spread parameters, object and array destructuring patterns, object shorthand/computed properties, var hoisting, and the `in` operator are fully supported.
+The core interpreter is **complete and fully operational**. Supported: arrow functions, template literals, rest/spread, destructuring, object shorthand/computed properties, var hoisting, named function expressions, and the `in` operator.
 
-The runtime also features a robust, Node.js-compatible interactive REPL supporting multiline balanced inputs, ANSI-colored value inspection, and a helpful error reporting engine with caret traceback and spellcheck suggestions.
+The REPL supports multiline balanced inputs, ANSI-colored inspection, caret traceback, and spellcheck suggestions.
 
-Planned roadmap features include `try/catch` exception blocks, classes, `for...of`/`for...in` statements, and full prototype chains.
+**Planned:** `try/catch`, classes, `for...of`/`for...in`, full prototype chains.
 
-For the detailed status of every single language construct, please review [CPP_IMPLEMENTATION.md](file:///home/hariomm/Projects/jsling/CPP_IMPLEMENTATION.md).
+See [CPP_IMPLEMENTATION.md](CPP_IMPLEMENTATION.md) for the detailed feature status of every language construct.
 
 ---
 
